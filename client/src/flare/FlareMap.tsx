@@ -5,7 +5,7 @@
 // WebGL unavailable -> message, and the side panels keep working.
 import { Component, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { House } from 'lucide-react';
-import { Map, MapControls, MapGeoJSON, MapMarker, MarkerContent, MarkerTooltip } from '@/components/ui/map';
+import { Map, MapControls, MapGeoJSON, MapMarker, MarkerContent, MarkerTooltip, useMap } from '@/components/ui/map';
 import { boundsOf, bucketByLocation, countByStatus, zonesGeoJson } from '../features/citizen/geo.ts';
 import type { DemoConfig, Incident, Shelter, Sos } from '../shared/api.ts';
 import { areaName, SEVERITY_COLOR } from './data.ts';
@@ -13,6 +13,18 @@ import { STATUS_COLOR, STATUS_LABEL } from './ui.tsx';
 
 const BASEMAP = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const STYLES = { light: BASEMAP, dark: BASEMAP };
+
+/** The basemap prints the city name large across the scene, through the zones and under the pins. Hide city and town labels; streets, water and neighbourhoods stay. */
+function QuietCityLabels() {
+  const { map, isLoaded } = useMap();
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+    for (const layer of map.getStyle().layers ?? []) {
+      if (layer.type === 'symbol' && layer['source-layer'] === 'places' && /city|town/.test(layer.id)) map.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  }, [map, isLoaded]);
+  return null;
+}
 
 function useBasemap(): boolean | null {
   const [ok, setOk] = useState<boolean | null>(null);
@@ -84,6 +96,7 @@ export function FlareMap({ incidents, activeId, onPickIncident, shelters, locati
     <div className="fl-map" role="group" aria-label="Live map of flood areas">
       <Boundary>
         <Map theme="light" styles={reachable ? STYLES : undefined} blank={!reachable} bounds={bounds} fitBoundsOptions={{ padding: wide ? 90 : 40, maxZoom: 14.5 }}>
+          <QuietCityLabels />
           <MapGeoJSON id="fl-zone-moderate" data={moderate} fillPaint={PAINT.moderate.fill} linePaint={PAINT.moderate.line} />
           <MapGeoJSON id="fl-zone-high" data={high} fillPaint={PAINT.high.fill} linePaint={PAINT.high.line} />
           {active && <MapGeoJSON id="fl-zone-active" data={outline} fillPaint={PAINT.active.fill} linePaint={PAINT.active.line} />}
