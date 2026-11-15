@@ -152,7 +152,7 @@ test("unified citizen toggles and stepper create SOS; responder assigns and reso
       .click();
     await citizen
       .getByRole("group", { name: "Type of help" })
-      .getByRole("button", { name: "Trapped", exact: true })
+      .getByRole("button", { name: "Supplies", exact: true })
       .click();
     await citizen
       .getByRole("textbox", { name: /What is happening/ })
@@ -169,6 +169,7 @@ test("unified citizen toggles and stepper create SOS; responder assigns and reso
     assert.equal(response.status(), 201);
     const created = await response.json();
     assert.equal(created.people, 3);
+    assert.equal(created.type, "supplies");
     assert.equal(created.incidentId, incident.id);
     assert.equal(created.locationMode, "manual-demo");
     assert.deepEqual(created.location, location.location);
@@ -358,6 +359,7 @@ test("all four recovery strategies display exact backend allocations and unmet q
             rows: [...card.querySelectorAll(".fl-resrow")].map((row) => {
               const value = row.querySelector("span.fl-mono");
               return {
+                resource: row.querySelector('span.fl-dim').textContent,
                 amount: [...value.childNodes]
                   .filter((node) => node.nodeType === 3)
                   .map((node) => node.textContent)
@@ -367,6 +369,7 @@ test("all four recovery strategies display exact backend allocations and unmet q
             }),
           })),
         );
+      assert.equal(actual.length, expected[strategy].allocations.length);
       for (
         let index = 0;
         index < expected[strategy].allocations.length;
@@ -380,6 +383,7 @@ test("all four recovery strategies display exact backend allocations and unmet q
         assert.deepEqual(
           actual[index].rows,
           resources.map((resource) => ({
+            resource: { water: 'Water', food: 'Food', hygiene: 'Hygiene' }[resource],
             amount: `${allocation.allocated[resource]}/${centre.needs[resource]}`,
             unmet: allocation.unmet[resource]
               ? `−${allocation.unmet[resource]}`
