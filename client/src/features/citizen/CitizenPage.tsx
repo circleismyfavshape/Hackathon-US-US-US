@@ -12,6 +12,7 @@ import { LocationPicker, type Chosen } from './LocationPicker.tsx';
 import { MapView } from './MapView.tsx';
 import { SosForm } from './SosForm.tsx';
 import { SosTracker } from './SosTracker.tsx';
+import { useLiveSos } from './useLiveSos.ts';
 import styles from './citizen.module.css';
 
 type Scenario = { incident: Incident; shelters: Shelter[]; config: DemoConfig };
@@ -34,6 +35,7 @@ export default function CitizenPage() {
   const [error, setError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<Chosen | null>(null);
   const [sos, setSos] = useState<Sos | null>(null);
+  const live = useLiveSos();
 
   const load = useCallback(() => {
     setError(null);
@@ -100,7 +102,7 @@ export default function CitizenPage() {
 
       <div className={styles.columns}>
         <div className={styles.areaMap}>
-          <MapView incident={incident} shelters={shelters} locations={config.demoLocations} selectedId={chosen?.id ?? null} onSelect={(id) => setChosen({ id, mode: 'manual-demo' })} />
+          <MapView incident={incident} shelters={shelters} locations={config.demoLocations} selectedId={chosen?.id ?? null} onSelect={(id) => setChosen({ id, mode: 'manual-demo' })} live={live} ownId={sos?.id ?? null} />
         </div>
 
         <section aria-labelledby="shelters-title" className={`${styles.group} ${styles.areaShelters}`}>

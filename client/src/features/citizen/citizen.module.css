@@ -139,3 +139,28 @@
 .details dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 .loading { display: grid; gap: 24px; }
+
+/* Live requests: dots fan out around their demo pin in screen space. Position is never jittered on the map. */
+.cluster { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-resting);
+  transform: rotate(var(--a)) translateX(30px) rotate(calc(-1 * var(--a)));
+  transition: background-color var(--duration-standard) var(--ease-standard);
+}
+.dotKey { width: 10px; height: 10px; border-radius: var(--radius-pill); flex: none; }
+.pending { background: var(--warning); }
+.assigned { background: var(--info); }
+.resolved { background: var(--success); }
+.own { outline: 2px solid var(--foreground); outline-offset: 1px; }
+.more { position: absolute; left: 0; top: 30px; transform: translateX(-50%); font-size: var(--text-xs); font-weight: 500; white-space: nowrap; }
+.liveRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.liveCounts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--text-secondary); }
+.liveCounts li { display: flex; align-items: center; gap: 6px; }
+.count { color: var(--foreground); font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .dot { transition: none; } }

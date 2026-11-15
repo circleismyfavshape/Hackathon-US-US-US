@@ -1,6 +1,6 @@
 // OWNER: D1. Pure geometry for the citizen map and zone check. No React, no DOM.
 import type { FeatureCollection, Polygon } from 'geojson';
-import type { LatLng, Ring, Zone } from '../../../../contracts/types.ts';
+import type { LatLng, Ring, SosStatus, Zone } from '../../../../contracts/types.ts';
 
 export type ZoneHit = Zone['level'] | 'none';
 
@@ -46,4 +46,18 @@ export function zonesGeoJson(zones: Zone[]): FeatureCollection<Polygon, { level:
       geometry: { type: 'Polygon', coordinates: [z.coordinates] },
     })),
   };
+}
+
+/** Every SOS snaps to a demo point, so many share one spot. Group them by nearest demo point (oldest first, as the API lists them). */
+export function bucketByLocation<T extends { location: LatLng }>(items: T[], locations: { id: string; location: LatLng }[]): Map<string, T[]> {
+  const out = new Map<string, T[]>(locations.map((l) => [l.id, []]));
+  if (locations.length === 0) return out;
+  for (const it of items) out.get(nearest(it.location, locations).id)!.push(it);
+  return out;
+}
+
+export function countByStatus(items: { status: SosStatus }[]): Record<SosStatus, number> {
+  const c: Record<SosStatus, number> = { pending: 0, assigned: 0, resolved: 0 };
+  for (const it of items) c[it.status]++;
+  return c;
 }
