@@ -1,0 +1,72 @@
+{
+  "_note": "HACKATHON DEMO — every record here is fictional/simulated. Coordinates are illustrative, not a measured flood footprint. GeoJSON rings are [lng, lat].",
+  "incidents": [
+    {
+      "id": "INC-DEMO-001",
+      "title": "SIMULATED Shah Alam Flood",
+      "type": "flood",
+      "severity": "high",
+      "sourceType": "simulation",
+      "sourceLabel": "HACKATHON DEMO — not an official alert",
+      "sourceUrl": null,
+      "updatedAt": "2026-11-15T11:00:00+08:00",
+      "location": { "lat": 3.073, "lng": 101.52 },
+      "zones": [
+        {
+          "id": "z1",
+          "level": "high",
+          "label": "Illustrative high-impact zone (simulated)",
+          "coordinates": [[101.516, 3.0705], [101.524, 3.0705], [101.524, 3.0765], [101.516, 3.0765], [101.516, 3.0705]]
+        },
+        {
+          "id": "z2",
+          "level": "moderate",
+          "label": "Illustrative moderate-impact zone (simulated)",
+          "coordinates": [[101.510, 3.066], [101.530, 3.066], [101.530, 3.081], [101.510, 3.081], [101.510, 3.066]]
+        }
+      ],
+      "guidance": [
+        "Demonstration only: consult official emergency authorities for real instructions.",
+        "Fictional scenario text: residents in the depicted zones are shown requesting help from upper floors.",
+        "Areas outside the depicted zones are NOT verified safe."
+      ]
+    }
+  ],
+  "shelters": [
+    {
+      "id": "SH-DEMO-1",
+      "incidentId": "INC-DEMO-001",
+      "name": "Demo Relief Centre A (fictional)",
+      "location": { "lat": 3.085, "lng": 101.535 },
+      "status": "demo-listed",
+      "sourceType": "simulation",
+      "sourceLabel": "Fictional shelter — not an officially designated or verified-open site",
+      "sourceUrl": null
+    },
+    {
+      "id": "SH-DEMO-2",
+      "incidentId": "INC-DEMO-001",
+      "name": "Demo Relief Centre B (fictional)",
+      "location": { "lat": 3.060, "lng": 101.505 },
+      "status": "demo-listed",
+      "sourceType": "simulation",
+      "sourceLabel": "Fictional shelter — not an officially designated or verified-open site",
+      "sourceUrl": null
+    }
+  ],
+  "demoLocations": [
+    { "id": "L1", "label": "Demo point inside high-impact zone", "location": { "lat": 3.073, "lng": 101.52 } },
+    { "id": "L2", "label": "Demo point inside moderate-impact zone", "location": { "lat": 3.079, "lng": 101.513 } },
+    { "id": "L3", "label": "Demo point outside depicted zones", "location": { "lat": 3.09, "lng": 101.54 } }
+  ],
+  "demoBounds": { "minLat": 3.0, "maxLat": 3.15, "minLng": 101.45, "maxLng": 101.6 },
+  "demoTeams": ["Demo Rescue A", "Demo Rescue B", "Demo Boat Team C"],
+  "recovery": {
+    "centres": [
+      { "id": "A", "name": "Relief Centre A", "priority": 1, "needs": { "water": 120, "food": 100, "hygiene": 40 } },
+      { "id": "B", "name": "Relief Centre B", "priority": 2, "needs": { "water": 80, "food": 100, "hygiene": 50 } },
+      { "id": "C", "name": "Relief Centre C", "priority": 3, "needs": { "water": 150, "food": 80, "hygiene": 70 } }
+    ],
+    "inventory": { "water": 220, "food": 200, "hygiene": 90 }
+  }
+}
