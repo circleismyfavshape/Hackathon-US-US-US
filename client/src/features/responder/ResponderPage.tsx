@@ -8,6 +8,7 @@ import {
   type SosPatch,
   type SosStatus,
 } from "../../shared/api.ts";
+import { FlareMark } from "../../shared/Logo.tsx";
 import {
   createSampleClient,
   liveResponderClient,
@@ -182,7 +183,7 @@ function Operations({
     <div className="flare-ops">
       <aside className="flare-sidebar" aria-label="Operations navigation">
         <a href="/" className="flare-brand">
-          <span className="flare-brand-mark">✳</span>
+          <FlareMark height={40} className="flare-brand-mark" aria-hidden="true" />
           <span>
             FLARE<small>RESPONSE & RECOVERY</small>
           </span>
