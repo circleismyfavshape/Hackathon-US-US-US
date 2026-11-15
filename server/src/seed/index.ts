@@ -6,7 +6,8 @@ import type { Incident, LatLng, RecoverySnapshot, Shelter } from '../../../contr
 export type DemoFixtures = {
   incidents: Incident[];
   shelters: Shelter[];
-  demoLocations: { id: string; label: string; location: LatLng }[];
+  demoLocations: { id: string; incidentId?: string; label: string; location: LatLng }[];
+  alerts: { id: string; incidentId: string; afterSeconds: number; kind: 'flood' | 'shelter' | 'update'; text: string; source: string }[];
   demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
   demoTeams: string[];
   recovery: RecoverySnapshot;

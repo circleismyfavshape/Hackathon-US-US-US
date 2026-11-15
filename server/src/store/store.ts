@@ -8,6 +8,7 @@ export const MAX_SOS = 500;
 export class DemoStore {
   fixtures: DemoFixtures;
   private sos = new Map<string, Sos>();
+  startedAt = Date.now();
 
   constructor() {
     this.fixtures = loadFixtures();
@@ -16,6 +17,7 @@ export class DemoStore {
   reset() {
     this.fixtures = loadFixtures();
     this.sos.clear();
+    this.startedAt = Date.now();
   }
 
   listSos(): Sos[] {

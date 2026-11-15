@@ -1,4 +1,4 @@
-# FLARE API Contract — v1.1 FROZEN
+# FLARE API Contract — v1.2
 
 **Owner:** D2 / `@69sxjid`. **Frozen:** 15 Nov 2026, ~11:30 MYT. Changes = one versioned D2 commit + a board post. Everyone else conforms.
 
@@ -8,6 +8,8 @@
 - **Casing:** camelCase everywhere. **Coordinates:** REST `{lat,lng}`; GeoJSON rings `[lng,lat]`.
 - **Errors:** `{ "error": string, "details"?: string[] }` with 400 (validation), 404 (unknown id/route), 409 (demo SOS cap of 500 reached), 501 (recovery engine not merged yet), 503 (AI explanation unavailable).
 - **v1.1 (additive, lead-approved, D4 `@circleismyfavshape`):** strategy `"optimized"` and `POST /api/recovery/explain`. Nothing in v1 changed.
+
+- **v1.2 (additive, lead: Sajid):** `GET /api/alerts` returns `Alert[]` `{ id, incidentId, kind, text, source, at }`, released over time since start or reset. The seed now has three incidents, and `demoLocations` entries carry `incidentId`. Nothing existing changed.
 
 ## Endpoints
 

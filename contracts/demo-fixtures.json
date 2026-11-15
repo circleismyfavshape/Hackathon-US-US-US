@@ -1,71 +1,93 @@
 {
-  "_note": "HACKATHON DEMO — every record here is fictional/simulated. Coordinates are illustrative, not a measured flood footprint. GeoJSON rings are [lng, lat].",
+  "_note": "Every record here is fictional. Coordinates are illustrative, not a measured flood footprint. GeoJSON rings are [lng, lat].",
   "incidents": [
     {
       "id": "INC-DEMO-001",
-      "title": "SIMULATED Shah Alam Flood",
+      "title": "Shah Alam · Seksyen 13 flood",
       "type": "flood",
       "severity": "high",
       "sourceType": "simulation",
-      "sourceLabel": "HACKATHON DEMO — not an official alert",
+      "sourceLabel": "Selangor Flood Watch · river gauge SA-04",
       "sourceUrl": null,
-      "updatedAt": "2026-11-15T11:00:00+08:00",
+      "updatedAt": "2026-11-15T13:20:00+08:00",
       "location": { "lat": 3.073, "lng": 101.52 },
       "zones": [
-        {
-          "id": "z1",
-          "level": "high",
-          "label": "Illustrative high-impact zone (simulated)",
-          "coordinates": [[101.516, 3.0705], [101.524, 3.0705], [101.524, 3.0765], [101.516, 3.0765], [101.516, 3.0705]]
-        },
-        {
-          "id": "z2",
-          "level": "moderate",
-          "label": "Illustrative moderate-impact zone (simulated)",
-          "coordinates": [[101.510, 3.066], [101.530, 3.066], [101.530, 3.081], [101.510, 3.081], [101.510, 3.066]]
-        }
+        { "id": "z1", "level": "high", "label": "High impact", "coordinates": [[101.516, 3.0705], [101.524, 3.0705], [101.524, 3.0765], [101.516, 3.0765], [101.516, 3.0705]] },
+        { "id": "z2", "level": "moderate", "label": "Moderate impact", "coordinates": [[101.510, 3.066], [101.530, 3.066], [101.530, 3.081], [101.510, 3.081], [101.510, 3.066]] }
       ],
       "guidance": [
-        "Demonstration only: consult official emergency authorities for real instructions.",
-        "Fictional scenario text: residents in the depicted zones are shown requesting help from upper floors.",
-        "Areas outside the depicted zones are NOT verified safe."
+        "Move to an upper floor and stay out of flood water.",
+        "Switch off electricity at the mains if water enters your home.",
+        "Areas outside the marked zones are not confirmed safe."
+      ]
+    },
+    {
+      "id": "INC-DEMO-002",
+      "title": "Subang Jaya · USJ flash flood",
+      "type": "flood",
+      "severity": "moderate",
+      "sourceType": "simulation",
+      "sourceLabel": "Community reports · 14 confirmations",
+      "sourceUrl": null,
+      "updatedAt": "2026-11-15T13:05:00+08:00",
+      "location": { "lat": 3.045, "lng": 101.583 },
+      "zones": [
+        { "id": "z3", "level": "high", "label": "High impact", "coordinates": [[101.580, 3.0435], [101.585, 3.0435], [101.585, 3.0475], [101.580, 3.0475], [101.580, 3.0435]] },
+        { "id": "z4", "level": "moderate", "label": "Moderate impact", "coordinates": [[101.575, 3.039], [101.592, 3.039], [101.592, 3.051], [101.575, 3.051], [101.575, 3.039]] }
+      ],
+      "guidance": [
+        "Avoid underpasses and low roads along Jalan USJ 4.",
+        "Move vehicles to higher ground only if it is safe to do so.",
+        "Areas outside the marked zones are not confirmed safe."
+      ]
+    },
+    {
+      "id": "INC-DEMO-003",
+      "title": "Klang · Bukit Raja river watch",
+      "type": "flood",
+      "severity": "low",
+      "sourceType": "simulation",
+      "sourceLabel": "River gauge KL-11 · level rising",
+      "sourceUrl": null,
+      "updatedAt": "2026-11-15T13:28:00+08:00",
+      "location": { "lat": 3.096, "lng": 101.477 },
+      "zones": [
+        { "id": "z5", "level": "moderate", "label": "Moderate impact", "coordinates": [[101.470, 3.091], [101.485, 3.091], [101.485, 3.101], [101.470, 3.101], [101.470, 3.091]] }
+      ],
+      "guidance": [
+        "River level is rising. Prepare to move valuables and documents upstairs.",
+        "Areas outside the marked zones are not confirmed safe."
       ]
     }
   ],
   "shelters": [
-    {
-      "id": "SH-DEMO-1",
-      "incidentId": "INC-DEMO-001",
-      "name": "Demo Relief Centre A (fictional)",
-      "location": { "lat": 3.085, "lng": 101.535 },
-      "status": "demo-listed",
-      "sourceType": "simulation",
-      "sourceLabel": "Fictional shelter — not an officially designated or verified-open site",
-      "sourceUrl": null
-    },
-    {
-      "id": "SH-DEMO-2",
-      "incidentId": "INC-DEMO-001",
-      "name": "Demo Relief Centre B (fictional)",
-      "location": { "lat": 3.060, "lng": 101.505 },
-      "status": "demo-listed",
-      "sourceType": "simulation",
-      "sourceLabel": "Fictional shelter — not an officially designated or verified-open site",
-      "sourceUrl": null
-    }
+    { "id": "SH-DEMO-1", "incidentId": "INC-DEMO-001", "name": "Seksyen 7 Community Hall", "location": { "lat": 3.085, "lng": 101.535 }, "status": "demo-listed", "sourceType": "simulation", "sourceLabel": "Listed by Selangor Flood Watch", "sourceUrl": null },
+    { "id": "SH-DEMO-2", "incidentId": "INC-DEMO-001", "name": "Seksyen 24 School Hall", "location": { "lat": 3.060, "lng": 101.505 }, "status": "demo-listed", "sourceType": "simulation", "sourceLabel": "Listed by Selangor Flood Watch", "sourceUrl": null },
+    { "id": "SH-DEMO-3", "incidentId": "INC-DEMO-002", "name": "USJ 7 Multipurpose Hall", "location": { "lat": 3.054, "lng": 101.590 }, "status": "demo-listed", "sourceType": "simulation", "sourceLabel": "Listed by community reports", "sourceUrl": null }
   ],
   "demoLocations": [
-    { "id": "L1", "label": "Demo point inside high-impact zone", "location": { "lat": 3.073, "lng": 101.52 } },
-    { "id": "L2", "label": "Demo point inside moderate-impact zone", "location": { "lat": 3.079, "lng": 101.513 } },
-    { "id": "L3", "label": "Demo point outside depicted zones", "location": { "lat": 3.09, "lng": 101.54 } }
+    { "id": "L1", "incidentId": "INC-DEMO-001", "label": "Seksyen 13, near the stadium", "location": { "lat": 3.073, "lng": 101.52 } },
+    { "id": "L2", "incidentId": "INC-DEMO-001", "label": "Seksyen 7 flats", "location": { "lat": 3.079, "lng": 101.513 } },
+    { "id": "L3", "incidentId": "INC-DEMO-001", "label": "Seksyen 9 shop row", "location": { "lat": 3.09, "lng": 101.54 } },
+    { "id": "L4", "incidentId": "INC-DEMO-002", "label": "Jalan USJ 4", "location": { "lat": 3.0455, "lng": 101.5825 } },
+    { "id": "L5", "incidentId": "INC-DEMO-002", "label": "USJ 9 shoplots", "location": { "lat": 3.041, "lng": 101.589 } },
+    { "id": "L6", "incidentId": "INC-DEMO-003", "label": "Jalan Meru, Bukit Raja", "location": { "lat": 3.096, "lng": 101.477 } }
   ],
   "demoBounds": { "minLat": 3.0, "maxLat": 3.15, "minLng": 101.45, "maxLng": 101.6 },
-  "demoTeams": ["Demo Rescue A", "Demo Rescue B", "Demo Boat Team C"],
+  "demoTeams": ["Rescue Team Alpha", "Rescue Team Bravo", "Boat Unit Charlie"],
+  "alerts": [
+    { "id": "AL-1", "incidentId": "INC-DEMO-001", "afterSeconds": 0, "kind": "flood", "text": "Flood water across Seksyen 13. Roads near the stadium are impassable.", "source": "Selangor Flood Watch" },
+    { "id": "AL-2", "incidentId": "INC-DEMO-002", "afterSeconds": 0, "kind": "flood", "text": "Flash flood on Jalan USJ 4 after heavy rain.", "source": "Community reports" },
+    { "id": "AL-3", "incidentId": "INC-DEMO-003", "afterSeconds": 25, "kind": "flood", "text": "New flood spotted near Bukit Raja. River level rising fast.", "source": "River gauge KL-11" },
+    { "id": "AL-4", "incidentId": "INC-DEMO-001", "afterSeconds": 55, "kind": "shelter", "text": "Seksyen 7 Community Hall is open as a relief centre.", "source": "District operations room" },
+    { "id": "AL-5", "incidentId": "INC-DEMO-002", "afterSeconds": 90, "kind": "update", "text": "Water is receding along USJ 9.", "source": "Community reports" },
+    { "id": "AL-6", "incidentId": "INC-DEMO-001", "afterSeconds": 130, "kind": "update", "text": "A second boat unit has been sent to Seksyen 13.", "source": "District operations room" }
+  ],
   "recovery": {
     "centres": [
-      { "id": "A", "name": "Relief Centre A", "priority": 1, "needs": { "water": 120, "food": 100, "hygiene": 40 } },
-      { "id": "B", "name": "Relief Centre B", "priority": 2, "needs": { "water": 80, "food": 100, "hygiene": 50 } },
-      { "id": "C", "name": "Relief Centre C", "priority": 3, "needs": { "water": 150, "food": 80, "hygiene": 70 } }
+      { "id": "A", "name": "Seksyen 7 Community Hall", "priority": 1, "needs": { "water": 120, "food": 100, "hygiene": 40 } },
+      { "id": "B", "name": "Seksyen 24 School Hall", "priority": 2, "needs": { "water": 80, "food": 100, "hygiene": 50 } },
+      { "id": "C", "name": "USJ 7 Multipurpose Hall", "priority": 3, "needs": { "water": 150, "food": 80, "hygiene": 70 } }
     ],
     "inventory": { "water": 220, "food": 200, "hygiene": 90 }
   }

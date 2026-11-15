@@ -28,6 +28,16 @@ export function createApp(store = new DemoStore(), explainer: Explainer = explai
     c.json({ demoLocations: store.fixtures.demoLocations, demoBounds: store.fixtures.demoBounds, demoTeams: store.fixtures.demoTeams }),
   );
 
+  // v1.2: live updates, released over time since the server started or was reset.
+  app.get('/api/alerts', (c) => {
+    const elapsed = (Date.now() - store.startedAt) / 1000;
+    return c.json(
+      store.fixtures.alerts
+        .filter((a) => a.afterSeconds <= elapsed)
+        .map(({ afterSeconds, ...a }) => ({ ...a, at: new Date(store.startedAt + afterSeconds * 1000).toISOString() })),
+    );
+  });
+
   app.post('/api/sos', async (c) => {
     const v = validateSosCreate(await readJson(c), store.fixtures);
     if (!v.ok) return bad(c, 400, 'invalid SOS', v.details);
