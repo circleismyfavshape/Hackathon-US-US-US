@@ -58,91 +58,181 @@ async function assertNoHorizontalOverflow(page) {
   );
 }
 
-test('citizen UI submits an SOS and sees responder assignment and resolution without reload', async () => {
+test("citizen UI submits an SOS and sees responder assignment and resolution without reload", async () => {
   const citizen = await newPage();
   const responder = await newPage();
   try {
     await citizen.goto(`${base}/citizen`);
     await responder.goto(`${base}/responder`);
-    await citizen.getByRole('radiogroup', { name: 'Where are you?' }).getByRole('radio', { name: 'L1', exact: true }).click();
-    await citizen.getByRole('spinbutton', { name: 'People', exact: true }).fill('3');
-    await citizen.getByRole('spinbutton', { name: 'People', exact: true }).press('Tab');
-    await citizen.getByRole('textbox', { name: /What is happening/ }).fill('Fictional two-tab test: three people waiting upstairs.');
-    await citizen.getByRole('button', { name: 'Send demo SOS', exact: true }).click();
-    await citizen.getByTestId('sos-id').waitFor();
-    const id = (await citizen.getByTestId('sos-id').innerText()).trim();
+    await citizen
+      .getByRole("radiogroup", { name: "Where are you?" })
+      .getByRole("radio", { name: "L1", exact: true })
+      .click();
+    await citizen
+      .getByRole("spinbutton", { name: "People", exact: true })
+      .fill("3");
+    await citizen
+      .getByRole("spinbutton", { name: "People", exact: true })
+      .press("Tab");
+    await citizen
+      .getByRole("textbox", { name: /What is happening/ })
+      .fill("Fictional two-tab test: three people waiting upstairs.");
+    await citizen
+      .getByRole("button", { name: "Send demo SOS", exact: true })
+      .click();
+    await citizen.getByTestId("sos-id").waitFor();
+    const id = (await citizen.getByTestId("sos-id").innerText()).trim();
     assert.match(id, /^SOS-/);
-    assert.equal(await citizen.getByTestId('sos-status').getAttribute('data-status'), 'pending');
-    await responder.locator('.flare-request-row').filter({ hasText: id }).click();
-    await responder.getByRole('button', { name: 'Assign Demo Team' }).click();
-    await citizen.locator('[data-testid="sos-status"][data-status="assigned"]').waitFor();
-    assert.match(await citizen.getByTestId('sos-status').innerText(), /Demo Rescue A/);
-    await responder.getByRole('button', { name: 'Mark Resolved', exact: true }).click();
-    await citizen.locator('[data-testid="sos-status"][data-status="resolved"]').waitFor();
-    assert.equal((await getSos(responder, id)).status, 'resolved');
-    await citizen.screenshot({ path: '.board/citizen-roundtrip.png', fullPage: true });
-    await responder.screenshot({ path: '.board/responder-live.png' });
-  } finally { await citizen.close(); await responder.close(); }
+    assert.equal(
+      await citizen.getByTestId("sos-status").getAttribute("data-status"),
+      "pending",
+    );
+    await responder
+      .locator(".flare-request-row")
+      .filter({ hasText: id })
+      .click();
+    await responder.getByRole("button", { name: "Assign Demo Team" }).click();
+    await citizen
+      .locator('[data-testid="sos-status"][data-status="assigned"]')
+      .waitFor();
+    assert.match(
+      await citizen.getByTestId("sos-status").innerText(),
+      /Demo Rescue A/,
+    );
+    await responder
+      .getByRole("button", { name: "Mark Resolved", exact: true })
+      .click();
+    await citizen
+      .locator('[data-testid="sos-status"][data-status="resolved"]')
+      .waitFor();
+    assert.equal((await getSos(responder, id)).status, "resolved");
+    await citizen.screenshot({
+      path: ".board/citizen-roundtrip.png",
+      fullPage: true,
+    });
+    await responder.screenshot({ path: ".board/responder-live.png" });
+  } finally {
+    await citizen.close();
+    await responder.close();
+  }
 });
 
-test('all four live recovery strategies render distinct allocations without stock changes or responsive overflow', async () => {
+test("all four live recovery strategies render distinct allocations without stock changes or responsive overflow", async () => {
   const page = await newPage();
   try {
-    const before = await (await page.request.get(`${base}/api/recovery`)).json();
+    const before = await (
+      await page.request.get(`${base}/api/recovery`)
+    ).json();
     await page.goto(`${base}/responder`);
-    await page.getByRole('button', { name: 'Compare strategies' }).click();
-    await page.locator('.flare-recovery-allocation').nth(11).waitFor();
-    assert.equal(await page.locator('.flare-recovery-result').count(), 4);
-    assert.equal(await page.locator('.flare-recovery-allocation table').count(), 12);
+    await page.getByRole("button", { name: "Compare strategies" }).click();
+    await page.locator(".flare-recovery-allocation").nth(11).waitFor();
+    assert.equal(await page.locator(".flare-recovery-result").count(), 4);
+    assert.equal(
+      await page.locator(".flare-recovery-allocation table").count(),
+      12,
+    );
     const waterForA = [];
     for (let index = 0; index < 4; index++) {
-      waterForA.push(await page.locator('.flare-recovery-result').nth(index).locator('tbody tr').first().locator('td').first().innerText());
+      waterForA.push(
+        await page
+          .locator(".flare-recovery-result")
+          .nth(index)
+          .locator("tbody tr")
+          .first()
+          .locator("td")
+          .first()
+          .innerText(),
+      );
     }
-    assert.deepEqual(waterForA, ['120', '76', '74', '91']);
-    assert.deepEqual(await (await page.request.get(`${base}/api/recovery`)).json(), before);
-    assert.equal(await page.locator('.flare-recovery-error').count(), 0);
+    assert.deepEqual(waterForA, ["120", "76", "74", "91"]);
+    assert.deepEqual(
+      await (await page.request.get(`${base}/api/recovery`)).json(),
+      before,
+    );
+    assert.equal(await page.locator(".flare-recovery-error").count(), 0);
     await page.setViewportSize({ width: 1024, height: 900 });
     await assertNoHorizontalOverflow(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await assertNoHorizontalOverflow(page);
-  } finally { await page.close(); }
+  } finally {
+    await page.close();
+  }
 });
 
-test('responder replaces the yellow global banner with compact simulation context', async () => {
+test("responder replaces the yellow global banner with compact simulation context", async () => {
   const page = await newPage();
   try {
     await page.goto(`${base}/responder`);
-    await page.getByText('Simulation workspace', { exact: true }).waitFor();
-    assert.equal(await page.locator('[role="status"][class*="sticky"]').count(), 0);
-    assert.equal(await page.getByText('HACKATHON DEMO — simulated disaster data; not an emergency service.', { exact: true }).count(), 0);
-    const chipHeight = await page.locator('.flare-simulation-chip').evaluate(element => element.getBoundingClientRect().height);
-    assert.ok(chipHeight <= 36, `Simulation context should be compact, got ${chipHeight}px`);
-  } finally { await page.close(); }
+    await page.getByText("Simulation workspace", { exact: true }).waitFor();
+    assert.equal(
+      await page.locator('[role="status"][class*="sticky"]').count(),
+      0,
+    );
+    assert.equal(
+      await page
+        .getByText(
+          "HACKATHON DEMO — simulated disaster data; not an emergency service.",
+          { exact: true },
+        )
+        .count(),
+      0,
+    );
+    const chipHeight = await page
+      .locator(".flare-simulation-chip")
+      .evaluate((element) => element.getBoundingClientRect().height);
+    assert.ok(
+      chipHeight <= 36,
+      `Simulation context should be compact, got ${chipHeight}px`,
+    );
+  } finally {
+    await page.close();
+  }
 });
 
-test('reduced-motion preference removes long animations and transitions from the responder workspace', async () => {
-  const page = await newPage({ reducedMotion: 'reduce' });
+test("reduced-motion preference removes long animations and transitions from the responder workspace", async () => {
+  const page = await newPage({ reducedMotion: "reduce" });
   try {
     await page.goto(`${base}/responder?mode=sample`);
-    await page.getByRole('heading', { name: 'SAMPLE-001', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Compare strategies' }).click();
-    await page.locator('.flare-recovery-allocation').nth(8).waitFor();
-    const violations = await page.locator('.flare-ops').evaluate(root => {
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return ['Reduced-motion media preference was not applied'];
-      const seconds = value => value.split(',').map(item => parseFloat(item) * (item.trim().endsWith('ms') ? 0.001 : 1));
+    await page
+      .getByRole("heading", { name: "SAMPLE-001", exact: true })
+      .waitFor();
+    await page.getByRole("button", { name: "Compare strategies" }).click();
+    await page.locator(".flare-recovery-allocation").nth(8).waitFor();
+    const violations = await page.locator(".flare-ops").evaluate((root) => {
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+        return ["Reduced-motion media preference was not applied"];
+      const seconds = (value) =>
+        value
+          .split(",")
+          .map(
+            (item) =>
+              parseFloat(item) * (item.trim().endsWith("ms") ? 0.001 : 1),
+          );
       const failures = [];
-      for (const element of [root, ...root.querySelectorAll('*')]) {
-        for (const pseudo of [null, '::before', '::after']) {
+      for (const element of [root, ...root.querySelectorAll("*")]) {
+        for (const pseudo of [null, "::before", "::after"]) {
           const style = getComputedStyle(element, pseudo);
-          if ((style.animationName !== 'none' && seconds(style.animationDuration).some(duration => duration > 0.05)) || seconds(style.transitionDuration).some(duration => duration > 0.05)) {
-            failures.push(`${element.tagName}.${element.getAttribute('class') ?? ''}${pseudo ?? ''}: animation=${style.animationDuration}, transition=${style.transitionDuration}`);
+          if (
+            (style.animationName !== "none" &&
+              seconds(style.animationDuration).some(
+                (duration) => duration > 0.05,
+              )) ||
+            seconds(style.transitionDuration).some(
+              (duration) => duration > 0.05,
+            )
+          ) {
+            failures.push(
+              `${element.tagName}.${element.getAttribute("class") ?? ""}${pseudo ?? ""}: animation=${style.animationDuration}, transition=${style.transitionDuration}`,
+            );
           }
         }
       }
       return failures;
     });
     assert.deepEqual(violations, []);
-  } finally { await page.close(); }
+  } finally {
+    await page.close();
+  }
 });
 
 test("sample queue actions and all strategy tables work without API calls; desktop/mobile fit", async () => {

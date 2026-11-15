@@ -1,7 +1,20 @@
 // D3 / Khaled — operational actions use the frozen shared API.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowUpRight, Check, ChevronRight, Clock3, Inbox, LayoutDashboard, MapPin, Package, Radio, RefreshCw, Search, Waves } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  Clock3,
+  Inbox,
+  LayoutDashboard,
+  MapPin,
+  Package,
+  Radio,
+  RefreshCw,
+  Search,
+  Waves,
+} from "lucide-react";
 import "@fontsource-variable/geist";
 import {
   poll,
@@ -187,7 +200,11 @@ function Operations({
     <div className="flare-ops">
       <aside className="flare-sidebar" aria-label="Operations navigation">
         <a href="/" className="flare-brand">
-          <FlareMark height={30} className="flare-brand-mark" aria-hidden="true" />
+          <FlareMark
+            height={30}
+            className="flare-brand-mark"
+            aria-hidden="true"
+          />
           <span>
             FLARE<small>OPERATIONS PLATFORM</small>
           </span>
@@ -198,7 +215,8 @@ function Operations({
             <LayoutDashboard size={17} aria-hidden="true" /> Overview
           </a>
           <a href="#sos-queue">
-            <Inbox size={17} aria-hidden="true" /> SOS requests <b>{rows.length}</b>
+            <Inbox size={17} aria-hidden="true" /> SOS requests{" "}
+            <b>{rows.length}</b>
           </a>
           <a href="#recovery">
             <Package size={17} aria-hidden="true" /> RecoveryGap
@@ -217,12 +235,22 @@ function Operations({
             Workspace <span aria-hidden="true">/</span>{" "}
             <strong>Operations</strong>
           </span>
-          <div className="flare-topbar-actions"><span className="flare-simulation-chip"><span /> Simulation workspace</span><a href="/citizen">Open citizen portal <ArrowUpRight size={14} aria-hidden="true" /></a></div>
+          <div className="flare-topbar-actions">
+            <span className="flare-simulation-chip">
+              <span /> Simulation workspace
+            </span>
+            <a href="/citizen">
+              Open citizen portal <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
+          </div>
         </header>
         <div className="flare-content">
           <div className="flare-page-heading">
             <div>
-              <p className="flare-eyebrow"><span className="flare-eyebrow-line" /> RESPONSE, WITHOUT THE NOISE</p>
+              <p className="flare-eyebrow">
+                <span className="flare-eyebrow-line" /> RESPONSE, WITHOUT THE
+                NOISE
+              </p>
               <h1>Operations overview</h1>
               <p>Every request. Every resource. One clear view.</p>
             </div>
@@ -243,7 +271,18 @@ function Operations({
               </button>
             </div>
           </div>
-          {mode === "sample" && <div className="flare-sample-notice" role="note"><Radio size={16} aria-hidden="true" /><div><strong>Sample workspace</strong><p>Local preview only. Updates stay in this session and are not shared with the citizen portal.</p></div></div>}
+          {mode === "sample" && (
+            <div className="flare-sample-notice" role="note">
+              <Radio size={16} aria-hidden="true" />
+              <div>
+                <strong>Sample workspace</strong>
+                <p>
+                  Local preview only. Updates stay in this session and are not
+                  shared with the citizen portal.
+                </p>
+              </div>
+            </div>
+          )}
           {contextError && (
             <div className="flare-error" role="alert">
               {contextError}{" "}
@@ -282,11 +321,21 @@ function Operations({
                   className={`flare-metric flare-metric-${status}`}
                   initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: reduceMotion ? 0 : .45, delay: reduceMotion ? 0 : index * .07 }}
+                  transition={{
+                    duration: reduceMotion ? 0 : 0.45,
+                    delay: reduceMotion ? 0 : index * 0.07,
+                  }}
                 >
                   <div>
                     <p>{statusLabels[status]} requests</p>
-                    <motion.strong key={loading ? 'loading' : counts[status]} initial={reduceMotion ? false : { opacity: .3, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : .2 }}>{loading ? "—" : counts[status]}</motion.strong>
+                    <motion.strong
+                      key={loading ? "loading" : counts[status]}
+                      initial={reduceMotion ? false : { opacity: 0.3, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                    >
+                      {loading ? "—" : counts[status]}
+                    </motion.strong>
                     <small>
                       {
                         [
@@ -297,7 +346,15 @@ function Operations({
                       }
                     </small>
                   </div>
-                  <span aria-hidden="true">{index === 0 ? <Clock3 size={19} /> : index === 1 ? <ArrowUpRight size={19} /> : <Check size={19} />}</span>
+                  <span aria-hidden="true">
+                    {index === 0 ? (
+                      <Clock3 size={19} />
+                    ) : index === 1 ? (
+                      <ArrowUpRight size={19} />
+                    ) : (
+                      <Check size={19} />
+                    )}
+                  </span>
                 </motion.div>
               ),
             )}
@@ -331,7 +388,12 @@ function Operations({
                   onClick={() => void refreshQueue()}
                   disabled={refreshing || saving}
                 >
-                  <RefreshCw size={13} className={refreshing ? 'flare-is-refreshing' : undefined} aria-hidden="true" />{refreshing ? "Refreshing…" : "Refresh"}
+                  <RefreshCw
+                    size={13}
+                    className={refreshing ? "flare-is-refreshing" : undefined}
+                    aria-hidden="true"
+                  />
+                  {refreshing ? "Refreshing…" : "Refresh"}
                 </button>
               </div>
             </div>
@@ -426,7 +488,7 @@ function Operations({
                         key={row.id}
                         initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: reduceMotion ? 0 : .25 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.25 }}
                         className={`flare-request-row ${selectedId === row.id ? "is-selected" : ""}`}
                         aria-pressed={selectedId === row.id}
                         onClick={() => {
@@ -438,7 +500,11 @@ function Operations({
                           className={`flare-request-symbol flare-symbol-${row.status}`}
                           aria-hidden="true"
                         >
-                          {row.status === "resolved" ? <Check size={17} /> : <Inbox size={17} />}
+                          {row.status === "resolved" ? (
+                            <Check size={17} />
+                          ) : (
+                            <Inbox size={17} />
+                          )}
                         </span>
                         <span className="flare-request-main">
                           <span className="flare-request-top">
@@ -515,7 +581,13 @@ function RequestDetails({
   }, [row?.assignedTeam]);
   const activeTeam = teams.includes(team) ? team : (teams[0] ?? "");
   return (
-    <motion.aside className="flare-card flare-detail" aria-labelledby="detail-heading" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : .25 }}>
+    <motion.aside
+      className="flare-card flare-detail"
+      aria-labelledby="detail-heading"
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.25 }}
+    >
       <div className="flare-detail-heading">
         <p className="flare-eyebrow">REQUEST DETAILS</p>
         <h3 id="detail-heading">{row?.id ?? "Select a request"}</h3>
