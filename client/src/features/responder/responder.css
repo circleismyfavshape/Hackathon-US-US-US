@@ -58,8 +58,8 @@
   margin-top: 1px;
 }
 .flare-brand-mark {
-  font-size: 40px;
-  color: #c9efac;
+  flex: none;
+  color: white;
 }
 .flare-nav-label {
   font-size: 9px;

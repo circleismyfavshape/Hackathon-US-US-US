@@ -2,6 +2,7 @@
 import CitizenPage from './features/citizen/CitizenPage.tsx';
 import ResponderPage from './features/responder/ResponderPage.tsx';
 import { DemoBanner } from './shared/DemoBanner.tsx';
+import { FlareLogo } from './shared/Logo.tsx';
 
 export default function App() {
   const path = window.location.pathname.replace(/\/+$/, '');
@@ -16,7 +17,9 @@ export default function App() {
 function Home() {
   return (
     <main className="mx-auto max-w-xl p-6">
-      <h1 className="text-3xl font-bold">FLARE</h1>
+      <h1>
+        <FlareLogo height={56} className="text-neutral-900" />
+      </h1>
       <p className="mt-1 text-slate-600">From Disaster Response to Recovery.</p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <a className="rounded-lg border bg-white p-4 font-medium shadow-sm hover:bg-slate-100" href="/citizen">
