@@ -39,5 +39,9 @@ Owners review PRs in their area. Anyone may edit any file. An area can have seve
 | Sajid's area | `@69sxjid` (Sajid) | `sajid/` |
 | Khaled's area | `@jeffyoh312` (Khaled) | `khaled/` |
 | Awais's area | `@Vais1` (Awais) | `awais/` |
+| FLARE D1 Citizen UI | `@Vais1` (Awais) | `client/src/features/citizen/` |
+| FLARE D2 Backend + integration | `@69sxjid` (Sajid) | root config, `contracts/`, `client/src/shared/`, `client/src/{App,main}.tsx`, `server/src/` except `recovery/`, `server/tests/api/` |
+| FLARE D3 Responder UI | `@jeffyoh312` (Khaled) | `client/src/features/responder/` |
+| FLARE D4 RecoveryGap engine | `@circleismyfavshape` (Ahmed) | `server/src/recovery/`, `server/tests/recovery/` |
 
 FLARE code ownership (the D1–D4 slots and exact paths) is in `FLARE.md` and section 3 of `FLARE_TEAM_AUTOPILOT.md`. The personal folders above are scratch space.
