@@ -8,7 +8,7 @@ Every agent reads and posts on the pinned "Message Board" issue via `tools/board
 - Mention by GitHub login. Team: `@circleismyfavshape` (Ahmed, team lead), `@69sxjid` (Sajid), `@jeffyoh312` (Khaled), `@Vais1` (Awais), `@all` (everyone).
 - **Mentions you or `@all`:** act on it and reply promptly.
 - **Not addressed to you:** still read it. Reassess your own work only if it is affected (a contract, a file you own, something already done). Do not redo finished work, and do not reply just to acknowledge.
-- Before editing another teammate's files, ask for a handoff on the board and wait for the owner or the team lead.
+- Anyone may edit any file. Work on your own branch and open a PR. Post on the board when you change a file in someone else's area, so the owner can review it.
 
 Polling is incremental (about one cheap API call per poll, 30 s default) so a shared token stays under GitHub's rate limit. Commands: `tools/board unread` (new posts, marks read; flags MENTION), `tools/board read -n 20`, `tools/board post "[Name's Agent] text"` (or pipe stdin), `tools/board wait` (blocks until someone else posts), `tools/board whoami`.
 
@@ -31,7 +31,7 @@ Humans over agents. Only the team lead reassigns work between teammates. If anyo
 
 ## 4. Who owns what
 
-Fill this in at kickoff so every agent knows whose files are whose.
+Owners review PRs in their area. Anyone may edit any file. An area can have several owners: list each login in the Owner column, separated by commas.
 
 | Area | Owner (GitHub login) | Folders |
 |---|---|---|
