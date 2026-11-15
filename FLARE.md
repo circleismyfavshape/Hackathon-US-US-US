@@ -20,7 +20,7 @@ Alerts, requests for help and relief supplies usually live in separate systems. 
 
 Anything that does not serve one of those three proofs is out. That is the test for new work.
 
-## What we questioned and changed (15 Nov, lead: Sajid)
+## What we questioned and changed (15 Nov, led by Sajid)
 
 The first build worked end to end, but it was three separate products: each page had its own layout, colours, fonts, header and wording, and Recovery was buried at the bottom of the responder page. A judge could not tell it was one system. So:
 
@@ -84,7 +84,7 @@ The earlier page code in `client/src/features/citizen/` and `client/src/features
 
 ## People
 
-Sajid (`@69sxjid`) lead, backend, integration and the unified front end. Awais (`@Vais1`) map and geometry. Khaled (`@jeffyoh312`) responder workflows and QA. Ahmed (`@circleismyfavshape`) allocation engine and logo.
+Khaled (`@jeffyoh312`) team lead, responder workflows and QA. Sajid (`@69sxjid`) backend, integration and the unified front end. Awais (`@Vais1`) map and geometry. Ahmed (`@circleismyfavshape`) allocation engine and logo.
 
 ## Limits
 
