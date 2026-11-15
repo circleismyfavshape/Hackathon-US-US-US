@@ -8,6 +8,8 @@
 **Status:** implementation instructions, **not evidence that any feature has been built or verified**  
 **Revision:** r1, 15 Nov ~11:30 MYT, by D2 / Integration Lead `@69sxjid` (Sajid). See the changelog below. **Where r1 and the older text disagree, r1 wins.**
 
+> **r2, 15 Nov ~13:15 MYT (lead: Sajid):** the front end is now one unified system under `client/src/flare/` with routes `/`, `/citizen`, `/responder`, `/recovery`. **FLARE.md is the current source of truth** for scope, structure, design rules and the demo script. Where this playbook disagrees (per-developer UI folders, the yellow banner, RecoveryGap inside the responder page), FLARE.md wins. Backend, contract v1.1 and engine are unchanged.
+
 ## r1 changelog: what the D2 audit changed and why
 
 The audit ran against the real repo `circleismyfavshape/Hackathon-US-US-US` (Node 24.21, npm 11.19, `gh` and `tools/board` verified working). The product scope, the name, the two portals, RecoveryGap and the 2+2 ownership are **unchanged**.

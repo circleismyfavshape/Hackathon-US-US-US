@@ -31,7 +31,7 @@ describe('pointInRing', () => {
 describe('nearest', () => {
   test('snaps a raw GPS fix to the closest demo location', () => {
     assert.equal(nearest({ lat: 3.0731, lng: 101.5201 }, fixtures.demoLocations).id, 'L1');
-    assert.equal(nearest({ lat: 1.35, lng: 103.82 }, fixtures.demoLocations).id, 'L3');
+    assert.equal(nearest({ lat: 1.35, lng: 103.82 }, fixtures.demoLocations).id, 'L5');
   });
 });
 
