@@ -35,16 +35,14 @@ export function SosTracker({ sos, onUpdate, onGone, onNew }: Props) {
   const team = sos.status === 'assigned' && sos.assignedTeam ? `: ${sos.assignedTeam}` : '';
   return (
     <section aria-label="Your SOS request" className={styles.tracker}>
-      <div className={styles.requestId}>
+      <div>
         <span className={styles.hint}>Request ID</span>
-        <span className={styles.requestIdValue} data-testid="sos-id">
+        <div className={styles.requestIdValue} data-testid="sos-id">
           {sos.id}
-        </span>
+        </div>
       </div>
 
-      <Alert tone={s.tone} title={`${s.title}${team}`} data-testid="sos-status" data-status={sos.status}>
-        {done ? 'Updates stopped. This request is closed.' : 'This page updates by itself. No need to reload.'}
-      </Alert>
+      <Alert tone={s.tone} title={`${s.title}${team}`} data-testid="sos-status" data-status={sos.status} />
 
       <Alert tone="warning" title="Cannot reach the server" open={offline}>
         Showing the last known status. Retrying.
@@ -57,13 +55,11 @@ export function SosTracker({ sos, onUpdate, onGone, onNew }: Props) {
         <dd>{sos.type}</dd>
         <dt>Details</dt>
         <dd>{sos.description}</dd>
-        <dt>Sent</dt>
-        <dd>{new Date(sos.createdAt).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })} MYT</dd>
       </dl>
 
       <p className={styles.fine}>{SOS_DISCLAIMER}</p>
       <div>
-        <Button variant="secondary" onClick={onNew}>
+        <Button variant="secondary" size="sm" onClick={onNew}>
           Send a new request
         </Button>
       </div>
