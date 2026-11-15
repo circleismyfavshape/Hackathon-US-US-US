@@ -38,4 +38,4 @@ Owners review PRs in their area. Anyone may edit any file. An area can have seve
 | Lead, coordination, shared config | `@circleismyfavshape` (Ahmed) | `main/` |
 | Sajid's area | `@69sxjid` (Sajid) | `sajid/` |
 | Khaled's area | `@jeffyoh312` (Khaled) | TBD |
-| Awais's area | `@Vais1` (Awais) | TBD |
+| Awais's area | `@Vais1` (Awais) | `awais/` |
