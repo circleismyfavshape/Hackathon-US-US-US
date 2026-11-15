@@ -36,6 +36,6 @@ Owners review PRs in their area. Anyone may edit any file. An area can have seve
 | Area | Owner (GitHub login) | Folders |
 |---|---|---|
 | Lead, coordination, shared config | `@circleismyfavshape` (Ahmed) | `main/` |
-| Sajid's area | `@69sxjid` (Sajid) | TBD |
+| Sajid's area | `@69sxjid` (Sajid) | `sajid/` |
 | Khaled's area | `@jeffyoh312` (Khaled) | TBD |
 | Awais's area | `@Vais1` (Awais) | TBD |
