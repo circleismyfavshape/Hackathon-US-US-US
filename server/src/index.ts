@@ -8,7 +8,9 @@ import { createMetAlerts } from './live/met.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 // Real MET Malaysia warnings are opt-in: FLARE_LIVE_ALERTS=1. Off by default, so the demo never depends on the network.
-const app = createApp(undefined, undefined, process.env.FLARE_LIVE_ALERTS === '1' ? createMetAlerts() : undefined);
+// In live mode the alerts feed is official-only: no simulated alert is shown beside a real one.
+const live = process.env.FLARE_LIVE_ALERTS === '1';
+const app = createApp(undefined, undefined, live ? createMetAlerts() : undefined, live);
 
 // `npm start` serves the built client from the same origin, so /citizen and /responder share one backend.
 const distDir = fileURLToPath(new URL('../../client/dist/', import.meta.url));

@@ -18,7 +18,7 @@ async function readJson(c: Context): Promise<unknown> {
   }
 }
 
-export function createApp(store = new DemoStore(), explainer: Explainer = explainTradeoffs, officialAlerts: OfficialAlerts = noOfficialAlerts) {
+export function createApp(store = new DemoStore(), explainer: Explainer = explainTradeoffs, officialAlerts: OfficialAlerts = noOfficialAlerts, officialOnly = false) {
   const app = new Hono();
 
   app.get('/api/health', (c) => c.json({ status: 'ok', mode: 'demo' }));
@@ -31,13 +31,15 @@ export function createApp(store = new DemoStore(), explainer: Explainer = explai
 
   // v1.2: live updates, released over time since the server started or was reset.
   // Official items (real, sourced, off unless enabled in index.ts) come first; any failure leaves just the simulated ones.
+  // officialOnly (live mode): the feed is the official items alone, so a simulated item is never shown beside a real one.
+  // If the official source is unreachable the feed is then empty, which is the honest answer.
   app.get('/api/alerts', async (c) => {
     const elapsed = (Date.now() - store.startedAt) / 1000;
     const simulated = store.fixtures.alerts
       .filter((a) => a.afterSeconds <= elapsed)
       .map(({ afterSeconds, ...a }) => ({ ...a, at: new Date(store.startedAt + afterSeconds * 1000).toISOString() }));
     const official = await officialAlerts().catch(() => []);
-    return c.json([...official, ...simulated]);
+    return c.json(officialOnly ? official : [...official, ...simulated]);
   });
 
   app.post('/api/sos', async (c) => {
