@@ -290,12 +290,9 @@ function SosForm({ incidentId, location, onCreated }: { incidentId: string; loca
       <button type="submit" className="fl-btn fl-btn-flare fl-btn-block" disabled={!ready || busy}>
         {busy ? 'Sending…' : 'Send SOS'}
       </button>
-      {(!location || !text.trim()) && (
-        <p className="fl-small fl-dim" style={{ margin: 0 }}>
-          {!location ? 'Choose where you are to send.' : 'Say what is happening to send.'}
-        </p>
-      )}
-      <p className="fl-small fl-dim" style={{ margin: 0 }}>Simulation only. No emergency service receives this request. In a real emergency call 999.</p>
+      <p className="fl-small fl-dim" style={{ margin: 0 }}>
+        {!location ? 'Choose where you are to send.' : !text.trim() ? 'Say what is happening to send.' : 'Simulation. In a real emergency call 999.'}
+      </p>
     </form>
   );
 }
@@ -315,7 +312,7 @@ function Tracker({ sos, onNew }: { sos: Sos; onNew: () => void }) {
       <ol className="fl-track" style={{ marginTop: 8 }}>
         <li data-on="true" data-now={step === 0}>
           <strong>Received <span>{myt(sos.createdAt)}</span></strong>
-          <p>Demo responders can see your request. No real emergency service is notified.</p>
+          <p>Responders can see your request.</p>
         </li>
         <li data-on={step >= 1} data-now={step === 1}>
           <strong>{STATUS_LABEL.assigned} {step === 1 && <span>{myt(sos.updatedAt)}</span>}</strong>
