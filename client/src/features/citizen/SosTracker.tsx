@@ -1,12 +1,15 @@
 // OWNER: D1. Polls GET /api/sos/:id every 2.5 s until resolved. Statuses come only from the backend.
 import { useEffect, useState } from 'react';
+import { Alert, type AlertTone } from '@/components/arc/alert/alert';
+import { Button } from '@/components/arc/button/button';
 import { api, ApiRequestError, poll, type Sos, type SosStatus } from '../../shared/api.ts';
 import { SOS_DISCLAIMER } from '../../shared/DemoBanner.tsx';
+import styles from './citizen.module.css';
 
-const STATUS: Record<SosStatus, { title: string; tone: string }> = {
-  pending: { title: 'Waiting for a responder', tone: 'border-amber-400 bg-amber-50 text-amber-950' },
-  assigned: { title: 'A demo team is assigned', tone: 'border-sky-500 bg-sky-50 text-sky-950' },
-  resolved: { title: 'Marked resolved', tone: 'border-emerald-500 bg-emerald-50 text-emerald-950' },
+const STATUS: Record<SosStatus, { title: string; tone: AlertTone }> = {
+  pending: { title: 'Waiting for a responder', tone: 'warning' },
+  assigned: { title: 'A demo team is assigned', tone: 'info' },
+  resolved: { title: 'Marked resolved', tone: 'success' },
 };
 
 type Props = { sos: Sos; onUpdate: (sos: Sos) => void; onGone: () => void; onNew: () => void };
@@ -29,41 +32,41 @@ export function SosTracker({ sos, onUpdate, onGone, onNew }: Props) {
   }, [sos.id, done, onUpdate, onGone]);
 
   const s = STATUS[sos.status];
+  const team = sos.status === 'assigned' && sos.assignedTeam ? `: ${sos.assignedTeam}` : '';
   return (
-    <section aria-label="Your SOS request" className="space-y-3">
-      <div className={`rounded-lg border-2 p-4 ${s.tone}`}>
-        <p className="text-xs">Request ID</p>
-        <p className="font-mono text-lg font-semibold" data-testid="sos-id">
+    <section aria-label="Your SOS request" className={styles.tracker}>
+      <div className={styles.requestId}>
+        <span className={styles.hint}>Request ID</span>
+        <span className={styles.requestIdValue} data-testid="sos-id">
           {sos.id}
-        </p>
-        <p role="status" aria-live="polite" className="mt-2 text-base font-semibold" data-testid="sos-status" data-status={sos.status}>
-          {s.title}
-          {sos.status === 'assigned' && sos.assignedTeam ? `: ${sos.assignedTeam}` : ''}
-        </p>
-        <p className="mt-1 text-sm">{done ? 'Updates stopped. This request is closed.' : 'This page updates by itself. No need to reload.'}</p>
+        </span>
       </div>
 
-      {offline && (
-        <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
-          Cannot reach the server. Showing the last known status. Retrying.
-        </p>
-      )}
+      <Alert tone={s.tone} title={`${s.title}${team}`} data-testid="sos-status" data-status={sos.status}>
+        {done ? 'Updates stopped. This request is closed.' : 'This page updates by itself. No need to reload.'}
+      </Alert>
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-slate-600">People</dt>
+      <Alert tone="warning" title="Cannot reach the server" open={offline}>
+        Showing the last known status. Retrying.
+      </Alert>
+
+      <dl className={styles.details}>
+        <dt>People</dt>
         <dd>{sos.people}</dd>
-        <dt className="text-slate-600">Type</dt>
+        <dt>Type</dt>
         <dd>{sos.type}</dd>
-        <dt className="text-slate-600">Details</dt>
-        <dd className="break-words">{sos.description}</dd>
-        <dt className="text-slate-600">Sent</dt>
-        <dd>{new Date(sos.createdAt).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}</dd>
+        <dt>Details</dt>
+        <dd>{sos.description}</dd>
+        <dt>Sent</dt>
+        <dd>{new Date(sos.createdAt).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })} MYT</dd>
       </dl>
 
-      <p className="text-xs text-slate-600">{SOS_DISCLAIMER}</p>
-      <button type="button" onClick={onNew} className="rounded-md border border-slate-400 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-100">
-        Send a new request
-      </button>
+      <p className={styles.fine}>{SOS_DISCLAIMER}</p>
+      <div>
+        <Button variant="secondary" onClick={onNew}>
+          Send a new request
+        </Button>
+      </div>
     </section>
   );
 }

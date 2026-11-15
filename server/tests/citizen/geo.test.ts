@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import fixtures from '../../../contracts/demo-fixtures.json' with { type: 'json' };
 import type { Incident, Ring } from '../../../contracts/types.ts';
-import { incidentPoints, nearest, pointInRing, projector, zoneAt } from '../../../client/src/features/citizen/geo.ts';
+import { boundsOf, bucketByLocation, countByStatus, nearest, pointInRing, zoneAt, zonesGeoJson } from '../../../client/src/features/citizen/geo.ts';
 
 const incident = fixtures.incidents[0] as Incident;
 const loc = (id: string) => fixtures.demoLocations.find((l) => l.id === id)!;
@@ -35,14 +35,36 @@ describe('nearest', () => {
   });
 });
 
-describe('projector', () => {
-  test('keeps every point inside the box, north up', () => {
-    const pts = incidentPoints(incident, [...fixtures.shelters.map((s) => s.location), ...fixtures.demoLocations.map((l) => l.location)]);
-    const pr = projector(pts);
-    for (const p of pts) {
-      const [x, y] = pr.xy(p);
-      assert.ok(x >= 0 && x <= pr.width && y >= 0 && y <= pr.height, `${JSON.stringify(p)} -> ${x},${y}`);
-    }
-    assert.ok(pr.xy({ lat: 3.09, lng: 101.52 })[1] < pr.xy({ lat: 3.07, lng: 101.52 })[1]);
+describe('map helpers', () => {
+  test('boundsOf encloses every point as [[minLng, minLat], [maxLng, maxLat]]', () => {
+    const pts = [...fixtures.shelters.map((s) => s.location), ...fixtures.demoLocations.map((l) => l.location)];
+    const [[w, s], [e, n]] = boundsOf(pts);
+    assert.ok(w < e && s < n);
+    for (const p of pts) assert.ok(p.lng >= w && p.lng <= e && p.lat >= s && p.lat <= n);
+  });
+  test('zonesGeoJson keeps level, label and the [lng, lat] ring', () => {
+    const fc = zonesGeoJson(incident.zones);
+    assert.equal(fc.features.length, incident.zones.length);
+    assert.deepEqual(fc.features[0].properties, { level: incident.zones[0].level, label: incident.zones[0].label });
+    assert.deepEqual(fc.features[0].geometry.coordinates[0], incident.zones[0].coordinates);
+  });
+});
+
+describe('live request helpers', () => {
+  const reqs = [
+    { id: 'a', status: 'pending' as const, location: loc('L1').location },
+    { id: 'b', status: 'assigned' as const, location: loc('L1').location },
+    { id: 'c', status: 'resolved' as const, location: { lat: 3.0731, lng: 101.5201 } },
+    { id: 'd', status: 'pending' as const, location: loc('L3').location },
+  ];
+  test('bucketByLocation groups by nearest demo point and keeps empty spots', () => {
+    const b = bucketByLocation(reqs, fixtures.demoLocations);
+    assert.deepEqual(b.get('L1')!.map((r) => r.id), ['a', 'b', 'c']);
+    assert.deepEqual(b.get('L3')!.map((r) => r.id), ['d']);
+    assert.deepEqual(b.get('L2'), []);
+  });
+  test('countByStatus counts every status, zero included', () => {
+    assert.deepEqual(countByStatus(reqs), { pending: 2, assigned: 1, resolved: 1 });
+    assert.deepEqual(countByStatus([]), { pending: 0, assigned: 0, resolved: 0 });
   });
 });
