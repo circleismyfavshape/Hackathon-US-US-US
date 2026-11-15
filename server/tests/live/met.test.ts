@@ -106,3 +106,21 @@ describe('GET /api/alerts', () => {
     assert.ok((await res.json() as unknown[]).every((a) => !(a as { source: string }).source.startsWith('MET Malaysia')));
   });
 });
+
+describe('GET /api/alerts in official-only (live) mode', () => {
+  const list = async (app: ReturnType<typeof createApp>) => (await (await app.request('/api/alerts')).json()) as { source: string }[];
+
+  test('only official items, never a simulated one', async () => {
+    const out = await list(createApp(new DemoStore(), undefined, createMetAlerts({ fetchImpl: ok(SAMPLE) }), true));
+    assert.equal(out.length, 2);
+    assert.ok(out.every((a) => a.source === MET_SOURCE));
+  });
+  test('official source down: the feed is empty, not padded with simulated items', async () => {
+    const out = await list(createApp(new DemoStore(), undefined, async () => { throw new Error('offline'); }, true));
+    assert.deepEqual(out, []);
+  });
+  test('flag off keeps the simulated alerts exactly as before', async () => {
+    const out = await list(createApp(new DemoStore(), undefined, undefined, false));
+    assert.ok(out.length > 0 && out.every((a) => !a.source.startsWith('MET Malaysia')));
+  });
+});
