@@ -17,6 +17,7 @@ import {
   type Resource,
   type Strategy,
 } from '../../../contracts/types.ts';
+import { optimize } from './optimized.ts';
 
 /** Kept for the route's 501 branch; the engine no longer throws it. */
 export class NotImplementedError extends Error {}
@@ -30,6 +31,7 @@ const STRATEGY_LABEL: Record<Strategy, string> = {
   'priority-first': 'Priority first',
   proportional: 'Proportional',
   'equal-share': 'Equal share',
+  optimized: 'Optimized (GLPK)',
 };
 
 function isQuantity(n: unknown): n is number {
@@ -133,7 +135,7 @@ function equalShare(demands: Demand[], stock: number): Map<string, number> {
   return out;
 }
 
-const ALLOCATORS: Record<Strategy, (d: Demand[], stock: number) => Map<string, number>> = {
+const ALLOCATORS: Record<Exclude<Strategy, 'optimized'>, (d: Demand[], stock: number) => Map<string, number>> = {
   'priority-first': priorityFirst,
   proportional,
   'equal-share': equalShare,
@@ -143,7 +145,12 @@ function zeros(): Quantities {
   return { water: 0, food: 0, hygiene: 0 };
 }
 
-function explain(strategy: Strategy, centres: Centre[], result: Omit<ComparisonResult, 'explanation' | 'assumptions' | 'status'>): string[] {
+function explain(
+  strategy: Strategy,
+  centres: Centre[],
+  result: Omit<ComparisonResult, 'explanation' | 'assumptions' | 'status'>,
+  guaranteedPercent?: number,
+): string[] {
   const lines: string[] = [];
   const name = new Map(centres.map((c) => [c.id, c.name]));
   const { requested, allocated, unmet } = result.totals;
@@ -152,6 +159,9 @@ function explain(strategy: Strategy, centres: Centre[], result: Omit<ComparisonR
       RESOURCES.map((r) => `${r} ${allocated[r]}/${requested[r]} requested units allocated`).join(', ') +
       '.',
   );
+  if (guaranteedPercent !== undefined) {
+    lines.push(`Every centre gets at least ${guaranteedPercent}% of each of its requests; stock above that floor goes by priority.`);
+  }
   for (const r of RESOURCES) {
     if (unmet[r] === 0) {
       lines.push(`All ${r} requests are met; ${result.inventoryRemaining[r]} units stay in stock.`);
@@ -175,6 +185,8 @@ const ASSUMPTIONS: Record<Strategy, string> = {
     'Under shortage, each centre gets stock in proportion to its request (largest-remainder rounding, ties by centre id).',
   'equal-share':
     'Stock is shared in equal units among centres that still need it; leftover single units go by priority, then id.',
+  optimized:
+    'A GLPK.js integer program first maximises the share of need guaranteed to every centre for every resource, then maximises priority-weighted units. It is optimal for that stated objective only.',
 };
 
 export function compareAllocations(snapshot: RecoverySnapshot, strategy: Strategy): ComparisonResult {
@@ -185,11 +197,15 @@ export function compareAllocations(snapshot: RecoverySnapshot, strategy: Strateg
   );
   const inventoryRemaining = zeros();
   const totals = { requested: zeros(), allocated: zeros(), unmet: zeros() };
+  const optimized = strategy === 'optimized' ? optimize(snapshot) : undefined;
 
   for (const r of RESOURCES as readonly Resource[]) {
     const demands: Demand[] = centres.map((c) => ({ id: c.id, priority: c.priority, need: c.needs[r] }));
     const stock = snapshot.inventory[r];
-    const given = ALLOCATORS[strategy](demands, stock);
+    const given =
+      strategy === 'optimized'
+        ? new Map(demands.map((d) => [d.id, optimized!.allocated.get(d.id)![r]]))
+        : ALLOCATORS[strategy](demands, stock);
     for (const d of demands) {
       const a = per.get(d.id)!;
       const g = given.get(d.id) ?? 0;
@@ -206,12 +222,16 @@ export function compareAllocations(snapshot: RecoverySnapshot, strategy: Strateg
   const core = { strategy, allocations, inventoryRemaining, totals };
   return {
     ...core,
-    explanation: explain(strategy, centres, core),
+    explanation: explain(strategy, centres, core, optimized?.guaranteedPercent),
     assumptions: [
       ASSUMPTIONS[strategy],
-      'Each resource (water, food, hygiene) is allocated independently in whole units.',
+      strategy === 'optimized'
+        ? 'Resources are allocated together in whole units, linked by one shared guaranteed share.'
+        : 'Each resource (water, food, hygiene) is allocated independently in whole units.',
       'Needs, priorities and stock are simulated demo data, not real reports.',
-      'This compares simple rules; it is not a proven optimal plan. A human coordinator decides.',
+      strategy === 'optimized'
+        ? 'Optimal only for the objective stated above; a different objective gives a different plan. A human coordinator decides.'
+        : 'This compares simple rules; it is not a proven optimal plan. A human coordinator decides.',
     ],
     status: 'demo-only',
   };
