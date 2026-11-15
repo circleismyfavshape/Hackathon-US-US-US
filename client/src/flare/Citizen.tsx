@@ -291,7 +291,7 @@ function SosForm({ incidentId, location, onCreated }: { incidentId: string; loca
         {busy ? 'Sending…' : 'Send SOS'}
       </button>
       <p className="fl-small fl-dim" style={{ margin: 0 }}>
-        {!location ? 'Choose where you are to send.' : !text.trim() ? 'Say what is happening to send.' : 'Simulation. In a real emergency call 999.'}
+        {!location ? 'Choose where you are to send. ' : !text.trim() ? 'Say what is happening to send. ' : ''}Simulation: no emergency service receives this. In a real emergency call 999.
       </p>
     </form>
   );
@@ -312,7 +312,7 @@ function Tracker({ sos, onNew }: { sos: Sos; onNew: () => void }) {
       <ol className="fl-track" style={{ marginTop: 8 }}>
         <li data-on="true" data-now={step === 0}>
           <strong>Received <span>{myt(sos.createdAt)}</span></strong>
-          <p>Responders can see your request.</p>
+          <p>It is now in the responder queue.</p>
         </li>
         <li data-on={step >= 1} data-now={step === 1}>
           <strong>{STATUS_LABEL.assigned} {step === 1 && <span>{myt(sos.updatedAt)}</span>}</strong>
@@ -323,6 +323,7 @@ function Tracker({ sos, onNew }: { sos: Sos; onNew: () => void }) {
           <p>{step === 2 ? 'Marked resolved by the response team.' : 'Closes when the team marks it resolved.'}</p>
         </li>
       </ol>
+      <p className="fl-small fl-dim" style={{ margin: 0 }}>Simulation: no emergency service receives this. In a real emergency call 999.</p>
       <div className="fl-row">
         <button type="button" className="fl-btn fl-btn-quiet fl-btn-sm" onClick={onNew}>New request</button>
       </div>
