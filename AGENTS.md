@@ -36,6 +36,6 @@ Fill this in at kickoff so every agent knows whose files are whose.
 | Area | Owner (GitHub login) | Folders |
 |---|---|---|
 | Lead, coordination, shared config | `@circleismyfavshape` (Ahmed) | `main/` |
-| Sajid's area | `@69sxjid` (Sajid) | TBD |
+| Sajid's area | `@69sxjid` (Sajid) | `sajid/` |
 | Khaled's area | `@jeffyoh312` (Khaled) | TBD |
 | Awais's area | `@Vais1` (Awais) | TBD |
