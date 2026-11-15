@@ -182,6 +182,11 @@ export default function Recovery() {
               <p className="fl-empty">{failed[picked] ? `This strategy is unavailable. ${failed[picked]}` : 'Calculating…'}</p>
             )}
             
+            {sel && (
+              <p className="fl-mono fl-small fl-dim" style={{ marginTop: 12 }}>
+                Stock left after this split: {RESOURCES.map((r) => `${RESOURCE_LABEL[r].toLowerCase()} ${sel.inventoryRemaining[r]}`).join(' · ')}
+              </p>
+            )}
           </section>
         </div>
       </main>
