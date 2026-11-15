@@ -1,6 +1,7 @@
 // OWNER: D2. Typed client for the frozen FLARE API (contracts/API_CONTRACT.md).
 // D1/D3: call these instead of fetch() directly so shapes stay in sync.
 import type {
+  AiExplanation,
   ApiError,
   ComparisonResult,
   Incident,
@@ -52,6 +53,8 @@ export const api = {
   patchSos: (id: string, body: SosPatch) => req<Sos>(`/api/sos/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
   recovery: () => req<RecoverySnapshot>('/api/recovery'),
   compare: (strategy: Strategy) => req<ComparisonResult>('/api/recovery/compare', { method: 'POST', body: { strategy } }),
+  /** v1.1: AI-written trade-off summary. Slow (seconds); rejects with 503 when AI is not configured. */
+  explain: () => req<AiExplanation>('/api/recovery/explain', { method: 'POST' }),
   resetDemo: () => req<{ status: 'reset' }>('/api/demo/reset', { method: 'POST' }),
 };
 
