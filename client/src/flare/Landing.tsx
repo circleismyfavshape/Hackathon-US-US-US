@@ -1,10 +1,82 @@
-// Home: a phone on its lock screen with one emergency alert. Opening the alert opens the citizen interface.
-// The phone reuses the frame from Phone.tsx (.fl-phone), so the lock screen and the phone view are one device.
+// Home, in two views with a switch between them:
+//  - Phone: a phone on its lock screen with one emergency alert. Opening the alert opens the citizen interface.
+//    The phone reuses the frame from Phone.tsx (.fl-phone), so the lock screen and the phone view are one device.
+//  - Desktop: the three doors, each with one live figure.
+// The view is kept in the URL (?view=desktop), so either one can be linked or bookmarked for the demo.
 import { useEffect, useState } from 'react';
-import { ChevronRight, TriangleAlert } from 'lucide-react';
-import { areaName, useScenario } from './data.ts';
+import { ArrowUpRight, ChevronRight, Monitor, Smartphone, TriangleAlert } from 'lucide-react';
+import { areaName, RESOURCES, useScenario, useSosList, type Scenario } from './data.ts';
 import { Shell } from './ui.tsx';
 
+type View = 'phone' | 'desktop';
+
+const readView = (): View => (new URLSearchParams(window.location.search).get('view') === 'desktop' ? 'desktop' : 'phone');
+
+export default function Landing() {
+  const { scenario } = useScenario();
+  const [view, setView] = useState<View>(readView);
+
+  useEffect(() => {
+    const onPop = () => setView(readView());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const choose = (v: View) => {
+    if (v === view) return;
+    setView(v);
+    window.history.pushState(null, '', v === 'desktop' ? '/?view=desktop' : '/');
+  };
+
+  return (
+    <Shell path="/">
+      <main className="fl-page fl-landing" data-view={view}>
+        <div className="fl-seg fl-viewswitch" role="group" aria-label="Landing view">
+          <button type="button" aria-pressed={view === 'phone'} onClick={() => choose('phone')}>
+            <Smartphone size={14} aria-hidden /> Phone
+          </button>
+          <button type="button" aria-pressed={view === 'desktop'} onClick={() => choose('desktop')}>
+            <Monitor size={14} aria-hidden /> Desktop
+          </button>
+        </div>
+        {view === 'phone' ? <LockScreen scenario={scenario} /> : <Doors scenario={scenario} />}
+      </main>
+    </Shell>
+  );
+}
+
+/* ── Desktop: three doors, each with one live figure ──────────────── */
+function Doors({ scenario }: { scenario: Scenario | null }) {
+  const live = useSosList(4000);
+  const open = live.list.filter((s) => s.status !== 'resolved').length;
+  const rec = scenario?.recovery;
+  const short = rec ? RESOURCES.reduce((n, r) => n + Math.max(0, rec.centres.reduce((m, c) => m + c.needs[r], 0) - rec.inventory[r]), 0) : null;
+
+  const doors = [
+    { n: '01', href: '/citizen', title: 'Citizen', live: scenario ? `${scenario.incidents.length} flood areas` : '…' },
+    { n: '02', href: '/responder', title: 'First responder', live: live.at ? `${open} open request${open === 1 ? '' : 's'}` : '…' },
+    { n: '03', href: '/recovery', title: 'Recovery', live: short === null ? '…' : `${short} units short` },
+  ];
+
+  return (
+    <>
+      <section className="fl-hero">
+        <h1 className="fl-h1">From the first alert<br />to the last <em>unmet need.</em></h1>
+      </section>
+      <nav className="fl-index" aria-label="Open an interface">
+        {doors.map((d) => (
+          <a key={d.href} href={d.href}>
+            <span className="fl-label">{d.n}</span>
+            <h2>{d.title}</h2>
+            <span className="fl-live">{d.live} <ArrowUpRight size={20} aria-hidden /></span>
+          </a>
+        ))}
+      </nav>
+    </>
+  );
+}
+
+/* ── Phone: lock screen with one emergency alert ──────────────────── */
 const W = 390;
 const H = 844;
 const TZ = 'Asia/Kuala_Lumpur';
@@ -12,8 +84,7 @@ const TZ = 'Asia/Kuala_Lumpur';
 /** A real phone opens the citizen page itself; a larger screen keeps the phone frame around it. */
 const citizenHref = () => (window.innerWidth <= 860 ? '/citizen' : '/phone/citizen');
 
-export default function Landing() {
-  const { scenario } = useScenario();
+function LockScreen({ scenario }: { scenario: Scenario | null }) {
   const [scale, setScale] = useState(1);
   const [now, setNow] = useState(() => new Date());
   const [opening, setOpening] = useState(false);
@@ -50,38 +121,36 @@ export default function Landing() {
   };
 
   return (
-    <Shell path="/">
-      <main className="fl-page fl-lockpage">
-        <section className="fl-hero">
-          <h1 className="fl-h1">From the first alert<br />to the last <em>unmet need.</em></h1>
-          <p>It starts with one alert on one phone. Open it to follow a request for help from the person who sends it to the supplies that still have to reach them.</p>
-          <p className="fl-label fl-lockhint">Tap the alert on the phone <ChevronRight size={13} aria-hidden /></p>
-        </section>
+    <div className="fl-lockpage">
+      <section className="fl-hero">
+        <h1 className="fl-h1">From the first alert<br />to the last <em>unmet need.</em></h1>
+        <p>It starts with one alert on one phone. Open it to follow a request for help from the person who sends it to the supplies that still have to reach them.</p>
+        <p className="fl-label fl-lockhint">Tap the alert on the phone <ChevronRight size={13} aria-hidden /></p>
+      </section>
 
-        <div className="fl-phone fl-lockphone" style={{ zoom: scale }}>
-          <div className="fl-phone-screen fl-lock" data-opening={opening || undefined} style={{ width: W, height: H }}>
-            <div className="fl-phone-status">
-              <span>{clock}</span>
-              <span>5G <i /></span>
-            </div>
-            <div className="fl-lock-time">
-              <span className="fl-lock-date">{date}</span>
-              <span className="fl-lock-clock">{clock}</span>
-            </div>
-            <button type="button" className="fl-lock-alert" onClick={open} data-testid="lock-alert" aria-label="Emergency flood alert. Open the citizen interface.">
-              <span className="fl-lock-alert-top">
-                <span className="fl-lock-alert-icon"><TriangleAlert size={17} aria-hidden /></span>
-                <span className="fl-lock-alert-app">Emergency alert</span>
-                <i>now</i>
-              </span>
-              <strong>EMERGENCY FLOOD</strong>
-              <span className="fl-lock-alert-body">{body}</span>
-              <span className="fl-lock-alert-meta">FLARE · Simulation · Tap to open</span>
-            </button>
-            <div className="fl-phone-home" />
+      <div className="fl-phone fl-lockphone" style={{ zoom: scale }}>
+        <div className="fl-phone-screen fl-lock" data-opening={opening || undefined} style={{ width: W, height: H }}>
+          <div className="fl-phone-status">
+            <span>{clock}</span>
+            <span>5G <i /></span>
           </div>
+          <div className="fl-lock-time">
+            <span className="fl-lock-date">{date}</span>
+            <span className="fl-lock-clock">{clock}</span>
+          </div>
+          <button type="button" className="fl-lock-alert" onClick={open} data-testid="lock-alert" aria-label="Emergency flood alert. Open the citizen interface.">
+            <span className="fl-lock-alert-top">
+              <span className="fl-lock-alert-icon"><TriangleAlert size={17} aria-hidden /></span>
+              <span className="fl-lock-alert-app">Emergency alert</span>
+              <i>now</i>
+            </span>
+            <strong>EMERGENCY FLOOD</strong>
+            <span className="fl-lock-alert-body">{body}</span>
+            <span className="fl-lock-alert-meta">FLARE · Simulation · Tap to open</span>
+          </button>
+          <div className="fl-phone-home" />
         </div>
-      </main>
-    </Shell>
+      </div>
+    </div>
   );
 }
