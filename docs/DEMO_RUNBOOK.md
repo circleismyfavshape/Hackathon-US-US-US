@@ -1,6 +1,6 @@
 # FLARE demo runbook (90 seconds)
 
-Written by Awais, 15 Nov 2026. Every step below was run end to end on main at c4a14c6 (the merge of PR #46, after #39 and #43). Screenshots of each step are in `awais/backup/`.
+Written by Awais, 15 Nov 2026. Every step below was run end to end on main at c4a14c6 (the merge of PR #46, after #39 and #43). Screenshots of each step are in `docs/screenshots/`.
 
 ## Before you walk on (2 minutes)
 
@@ -13,7 +13,7 @@ Written by Awais, 15 Nov 2026. Every step below was run end to end on main at c4
 
 | Time | Say | Do |
 |---|---|---|
-| 0:00 | "Disaster apps tell people what happened. The alert, the call for help and the relief stock are usually three separate worlds." | Show the landing page (01). Three doors: Citizen, First responder, Recovery. |
+| 0:00 | "Disaster apps tell people what happened. The alert, the call for help and the relief stock are usually three separate worlds." | Show the landing page (01): a phone lock screen with an EMERGENCY FLOOD notification. Click the notification to open the citizen interface. |
 | 0:10 | "A citizen sees three flood areas, with updates. This is a simulation, labelled on every screen." | Tab A: the overview with 3 areas and the updates feed (02). Click **Shah Alam**. |
 | 0:20 | "They say where they are and what is happening." | Click **L1**, leave type as Trapped, press **More people** twice, type "Three people waiting upstairs, water rising" (03, 04). Press **Send SOS**. A real request ID appears, status Pending, with the line "Simulation: no emergency service receives this" (05). |
 | 0:40 | "On the responder side that exact request is already in the queue." | Tab B: click the same ID in the queue (06). Press **Assign team** (07). |
@@ -37,7 +37,7 @@ Written by Awais, 15 Nov 2026. Every step below was run end to end on main at c4
 | Request does not appear in the responder queue | Reload tab B. The queue is the same backend. If still missing, reset and redo. |
 | Page is stale or odd | Reload both tabs. State lives in the server, not the page. |
 | Server restarted | State is reseeded (in memory by design). Reset and start again. |
-| Everything is down | Show the screenshots in `awais/backup/` in order 01 to 12. |
+| Everything is down | Show the screenshots in `docs/screenshots/` in order 01 to 12. |
 
 ## What is verified and what is not
 
@@ -47,4 +47,4 @@ Not verified: real browser GPS on a phone, a real touch device, a live AI summar
 
 Known cosmetic issue: on the citizen overview the "Subang Jaya" chip is partly covered by a relief-centre icon. It does not affect the demo path.
 
-Real public data (MET Malaysia warnings) is NOT in the demo. See `awais/REAL_DATA.md`. Do not claim live data unless it has been merged and tested.
+Real public data (MET Malaysia warnings) is NOT in the demo. See `docs/REAL_DATA.md`. Do not claim live data unless it has been merged and tested.

@@ -1,5 +1,5 @@
 // Official alerts from MET Malaysia, through data.gov.my. Read-only, server-side, and OFF unless index.ts turns it on.
-// Rules (FLARE_TEAM_AUTOPILOT.md section 1): real data carries its provenance and a timestamp, and it never blocks the demo.
+// Rules (docs/process/FLARE_TEAM_AUTOPILOT.md section 1): real data carries its provenance and a timestamp, and it never blocks the demo.
 // Any failure falls back to nothing, so /api/alerts keeps serving the simulated alerts.
 import type { Alert } from '../../../contracts/types.ts';
 
