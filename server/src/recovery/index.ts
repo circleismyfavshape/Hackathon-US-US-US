@@ -229,7 +229,9 @@ export function compareAllocations(snapshot: RecoverySnapshot, strategy: Strateg
         ? 'Resources are allocated together in whole units, linked by one shared guaranteed share.'
         : 'Each resource (water, food, hygiene) is allocated independently in whole units.',
       'Needs, priorities and stock are simulated demo data, not real reports.',
-      'This compares allocation rules; none is the single right plan. A human coordinator decides.',
+      strategy === 'optimized'
+        ? 'Optimal only for the objective stated above; a different objective gives a different plan. A human coordinator decides.'
+        : 'This compares simple rules; it is not a proven optimal plan. A human coordinator decides.',
     ],
     status: 'demo-only',
   };
