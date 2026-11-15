@@ -70,9 +70,15 @@ describe('seed fixture (known outputs, for D2/D3)', () => {
     assertInvariants(seed, r);
     assert.deepEqual(allocOf(r), { A: q(74, 67, 30), B: q(73, 67, 30), C: q(73, 66, 30) });
   });
-  test('the three strategies differ under the seed shortage', () => {
+  test('optimized (GLPK): 55% floor for everyone, rest by priority', () => {
+    const r = compareAllocations(seed, 'optimized');
+    assertInvariants(seed, r);
+    assert.deepEqual(allocOf(r), { A: q(91, 99, 23), B: q(45, 56, 28), C: q(84, 45, 39) });
+    assert.ok(r.explanation.some((l) => l.includes('at least 55%')));
+  });
+  test('all strategies differ under the seed shortage', () => {
     const outs = STRATEGIES.map((s) => JSON.stringify(allocOf(compareAllocations(seed, s))));
-    assert.equal(new Set(outs).size, 3);
+    assert.equal(new Set(outs).size, STRATEGIES.length);
   });
 });
 
@@ -159,6 +165,40 @@ describe('strategy specifics', () => {
       }
       for (const c of s.centres) assert.equal(r[c.id][res], got[c.id], `${res}/${c.id}`);
     }
+  });
+});
+
+describe('optimized strategy (GLPK)', () => {
+  /** Smallest allocated/need ratio over every nonzero need. */
+  const minShare = (s: RecoverySnapshot, r: ComparisonResult) =>
+    Math.min(
+      1,
+      ...s.centres.flatMap((c) =>
+        RESOURCES.filter((res) => c.needs[res] > 0).map(
+          (res) => r.allocations.find((a) => a.centreId === c.id)!.allocated[res] / c.needs[res],
+        ),
+      ),
+    );
+  test('guaranteed share is at least as high as every other strategy', () => {
+    let x = 777;
+    const rnd = (n: number) => ((x = (x * 1103515245 + 12345) % 2 ** 31), x % n);
+    for (let i = 0; i < 60; i++) {
+      const centres = Array.from({ length: 1 + rnd(4) }, (_, k) => [`C${k}`, rnd(3), q(rnd(120), rnd(120), rnd(40))]) as [
+        string,
+        number,
+        Quantities,
+      ][];
+      const s = snap(q(rnd(250), rnd(250), rnd(80)), ...centres);
+      const best = minShare(s, compareAllocations(s, 'optimized'));
+      for (const other of ['priority-first', 'proportional', 'equal-share'] as const) {
+        assert.ok(best >= minShare(s, compareAllocations(s, other)) - 1e-9, `case ${i} vs ${other}`);
+      }
+    }
+  });
+  test('leftover above the floor goes to the higher priority centre', () => {
+    // 15 units, two requests of 10: the best whole-unit floor is 70% (7 each), then the 1 spare unit goes to A.
+    const s = snap(q(15, 0, 0), ['B', 2, q(10, 0, 0)], ['A', 1, q(10, 0, 0)]);
+    assert.deepEqual(allocOf(compareAllocations(s, 'optimized')), { B: q(7, 0, 0), A: q(8, 0, 0) });
   });
 });
 

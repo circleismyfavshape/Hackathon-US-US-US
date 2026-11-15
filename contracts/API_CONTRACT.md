@@ -1,4 +1,4 @@
-# FLARE API Contract — v1 FROZEN
+# FLARE API Contract — v1.1 FROZEN
 
 **Owner:** D2 / `@69sxjid`. **Frozen:** 15 Nov 2026, ~11:30 MYT. Changes = one versioned D2 commit + a board post. Everyone else conforms.
 
@@ -6,7 +6,8 @@
 - **Seed data (source of truth):** [`contracts/demo-fixtures.json`](demo-fixtures.json). The server loads it at startup and on reset. Client mocks should import the same file.
 - **Base URL:** same origin `/api`. Dev: Vite on `:5173` proxies to Hono on `:8787`. `npm start` serves everything on `:8787`.
 - **Casing:** camelCase everywhere. **Coordinates:** REST `{lat,lng}`; GeoJSON rings `[lng,lat]`.
-- **Errors:** `{ "error": string, "details"?: string[] }` with 400 (validation), 404 (unknown id/route), 409 (demo SOS cap of 500 reached), 501 (recovery engine not merged yet).
+- **Errors:** `{ "error": string, "details"?: string[] }` with 400 (validation), 404 (unknown id/route), 409 (demo SOS cap of 500 reached), 501 (recovery engine not merged yet), 503 (AI explanation unavailable).
+- **v1.1 (additive, lead-approved, D4 `@circleismyfavshape`):** strategy `"optimized"` and `POST /api/recovery/explain`. Nothing in v1 changed.
 
 ## Endpoints
 
@@ -21,7 +22,8 @@
 | GET | `/api/sos/:id` | — | `Sos` (citizen polls this every 2–3 s) |
 | PATCH | `/api/sos/:id` | `{status:"assigned",assignedTeam}` \| `{status:"resolved"}` \| `{status:"pending"}` | `Sos` (updated). `resolved` keeps `assignedTeam`; `pending` clears it |
 | GET | `/api/recovery` | — | `RecoverySnapshot` `{ centres[3], inventory }` |
-| POST | `/api/recovery/compare` | `{ strategy: "priority-first"\|"proportional"\|"equal-share" }` | `ComparisonResult` (see below). **501 until D4's engine merges.** Never mutates inventory |
+| POST | `/api/recovery/compare` | `{ strategy: "priority-first"\|"proportional"\|"equal-share"\|"optimized" }` | `ComparisonResult` (see below). Never mutates inventory |
+| POST | `/api/recovery/explain` | — | `AiExplanation` `{ text, model, source:"ai", basedOn, disclaimer, status:"demo-only" }`. Claude describes the trade-offs between all strategies using only the engine's numbers. **503** when the server has no `ANTHROPIC_API_KEY` or the AI call fails. Takes several seconds; call it on a button press, not on a poll |
 | POST | `/api/demo/reset` | — | `{ status:"reset", mode:"demo" }` reseeds and clears all SOS |
 
 ## SOS validation (server-enforced)
@@ -45,3 +47,5 @@
 ```
 
 Engine signature (D4, `server/src/recovery/index.ts`): `compareAllocations(snapshot: RecoverySnapshot, strategy: Strategy): ComparisonResult`. It is pure and deterministic, uses nonnegative integers, keeps `Σallocated ≤ inventory` and `allocated ≤ need` per resource, and must not mutate its input. The route already passes a `structuredClone`.
+
+`"optimized"` (v1.1) is a GLPK.js integer program: it first maximises the share of need guaranteed to every centre for every resource, then maximises priority-weighted units. It is optimal for that objective only, and `explanation` states the guaranteed percentage.
