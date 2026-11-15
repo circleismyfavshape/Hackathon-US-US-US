@@ -28,7 +28,13 @@ export class ApiRequestError extends Error {
     public status: number,
     public body: ApiError | null,
   ) {
-    super(body?.details?.length ? `${body.error}: ${body.details.join('; ')}` : (body?.error ?? `HTTP ${status}`));
+    super(
+      body?.details?.length
+        ? `${body.error}: ${body.details.join('; ')}`
+        : (body?.error ??
+            // A 5xx with no JSON body comes from the dev proxy, not from FLARE: the API server on :8787 is not running.
+            (status >= 500 ? 'The FLARE API server is not running. Start it with npm run dev (or npm start).' : `HTTP ${status}`)),
+    );
   }
 }
 
