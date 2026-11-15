@@ -1,4 +1,4 @@
-// Phone view: the citizen or responder interface inside an iPhone frame, at real phone size.
+// Phone view: the citizen, responder or recovery interface inside an iPhone frame, at real phone size.
 // It is the same live page, so it scrolls, and notifications drop in from the top like push alerts.
 import { useEffect, useState } from 'react';
 import { Shell } from './ui.tsx';
@@ -7,7 +7,7 @@ const W = 390;
 const H = 844;
 const STATUS = 46;
 
-export default function Phone({ which }: { which: 'citizen' | 'responder' }) {
+export default function Phone({ which }: { which: 'citizen' | 'responder' | 'recovery' }) {
   const [scale, setScale] = useState(1);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -25,9 +25,10 @@ export default function Phone({ which }: { which: 'citizen' | 'responder' }) {
   return (
     <Shell path={`/phone/${which}`}>
       <div className="fl-phonepage">
-        <div className="fl-seg" role="group" aria-label="Phone view" style={{ width: 300 }}>
+        <div className="fl-seg" role="group" aria-label="Phone view" style={{ width: 400 }}>
           <button type="button" aria-pressed={which === 'citizen'} onClick={() => (window.location.href = '/phone/citizen')}>Citizen</button>
           <button type="button" aria-pressed={which === 'responder'} onClick={() => (window.location.href = '/phone/responder')}>First responder</button>
+          <button type="button" aria-pressed={which === 'recovery'} onClick={() => (window.location.href = '/phone/recovery')}>Recovery</button>
         </div>
         <div className="fl-phone" style={{ zoom: scale }}>
           <div className="fl-phone-screen" style={{ width: W, height: H }}>

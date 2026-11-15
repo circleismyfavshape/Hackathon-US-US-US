@@ -13,5 +13,6 @@ export default function App() {
   if (path === '/recovery') return <Recovery />;
   if (path === '/phone/citizen') return <Phone which="citizen" />;
   if (path === '/phone/responder') return <Phone which="responder" />;
+  if (path === '/phone/recovery') return <Phone which="recovery" />;
   return <Landing />;
 }

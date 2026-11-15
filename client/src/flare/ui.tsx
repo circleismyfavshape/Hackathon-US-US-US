@@ -29,7 +29,7 @@ export const EMBEDDED = (() => {
 if (EMBEDDED) document.documentElement.classList.add('fl-embedded');
 
 export function Shell({ path, children }: { path: string; children: ReactNode }) {
-  const phoneable = path === '/citizen' || path === '/responder';
+  const phoneable = path === '/citizen' || path === '/responder' || path === '/recovery';
   return (
     <div className="fl-app" data-embedded={EMBEDDED || undefined}>
       <header className="fl-top">
