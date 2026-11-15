@@ -1,6 +1,7 @@
 // The single FLARE Hono app (owner: D2). Demo only — no auth, synthetic data, not an emergency service.
 import { Hono, type Context } from 'hono';
 import type { ApiError } from '../../contracts/types.ts';
+import { noOfficialAlerts, type OfficialAlerts } from './live/met.ts';
 import { AiUnavailableError, explainTradeoffs, type Explainer } from './recovery/explain.ts';
 import { compareAllocations, NotImplementedError } from './recovery/index.ts';
 import { validateSosCreate, validateSosPatch, validateStrategy } from './routes/validate.ts';
@@ -17,7 +18,7 @@ async function readJson(c: Context): Promise<unknown> {
   }
 }
 
-export function createApp(store = new DemoStore(), explainer: Explainer = explainTradeoffs) {
+export function createApp(store = new DemoStore(), explainer: Explainer = explainTradeoffs, officialAlerts: OfficialAlerts = noOfficialAlerts) {
   const app = new Hono();
 
   app.get('/api/health', (c) => c.json({ status: 'ok', mode: 'demo' }));
@@ -29,13 +30,14 @@ export function createApp(store = new DemoStore(), explainer: Explainer = explai
   );
 
   // v1.2: live updates, released over time since the server started or was reset.
-  app.get('/api/alerts', (c) => {
+  // Official items (real, sourced, off unless enabled in index.ts) come first; any failure leaves just the simulated ones.
+  app.get('/api/alerts', async (c) => {
     const elapsed = (Date.now() - store.startedAt) / 1000;
-    return c.json(
-      store.fixtures.alerts
-        .filter((a) => a.afterSeconds <= elapsed)
-        .map(({ afterSeconds, ...a }) => ({ ...a, at: new Date(store.startedAt + afterSeconds * 1000).toISOString() })),
-    );
+    const simulated = store.fixtures.alerts
+      .filter((a) => a.afterSeconds <= elapsed)
+      .map(({ afterSeconds, ...a }) => ({ ...a, at: new Date(store.startedAt + afterSeconds * 1000).toISOString() }));
+    const official = await officialAlerts().catch(() => []);
+    return c.json([...official, ...simulated]);
   });
 
   app.post('/api/sos', async (c) => {
