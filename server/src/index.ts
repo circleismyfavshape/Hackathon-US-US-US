@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { createApp } from './app.ts';
+import { createMetAlerts } from './live/met.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
-const app = createApp();
+// Real MET Malaysia warnings are opt-in: FLARE_LIVE_ALERTS=1. Off by default, so the demo never depends on the network.
+const app = createApp(undefined, undefined, process.env.FLARE_LIVE_ALERTS === '1' ? createMetAlerts() : undefined);
 
 // `npm start` serves the built client from the same origin, so /citizen and /responder share one backend.
 const distDir = fileURLToPath(new URL('../../client/dist/', import.meta.url));
