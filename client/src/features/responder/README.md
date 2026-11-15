@@ -65,4 +65,6 @@ Then in a second PowerShell terminal:
 
 The browser suite defaults to `http://localhost:8793`; `FLARE_TEST_URL` can override it for another dedicated server. `FLARE_BROWSER_TOOLS` can override the isolated tooling directory. Tests cover sample mode with zero API calls, desktop/mobile overflow, live polling and persisted assignment/resolution, failed writes, stale queue handling, and partial/mismatched recovery responses. Screenshots are saved to `.board/responder-desktop.png` and `.board/responder-mobile.png`.
 
-API acceptance creates the initial SOS through `/api/sos` and verifies updates through a second API client. The complete D1 citizen-portal-to-responder demonstration remains an integration check pending D1's portal merge; this module's tests do not claim that UI path has been verified.
+The integrated browser suite also opens both real portals, submits an SOS through D1's citizen form, selects that exact ID in the responder queue, assigns a demo team and marks it resolved. The citizen tab must observe both backend status changes without a reload. A separate live recovery check renders all three strategies and verifies the inventory stays unchanged. Evidence screenshots are `.board/citizen-roundtrip.png` and `.board/responder-live.png`.
+
+Verified against integrated main `0d6b198` plus this module: 63 root server tests, 4 sample-adapter tests, 7 Chromium tests, and the production build pass. No shared contract or package dependency changes.
