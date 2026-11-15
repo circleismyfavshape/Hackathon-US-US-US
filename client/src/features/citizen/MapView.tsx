@@ -4,7 +4,7 @@
 //   WebGL unavailable         -> error boundary message; the location list and form keep working
 import { Component, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { House } from 'lucide-react';
-import { Map, MapControls, MapGeoJSON, MapMarker, MarkerContent, MarkerPopup, MarkerTooltip } from '@/components/ui/map';
+import { Map, MapControls, MapGeoJSON, MapMarker, MarkerContent, MarkerLabel, MarkerPopup, MarkerTooltip, useMap } from '@/components/ui/map';
 import type { DemoConfig, Incident, Shelter } from '../../shared/api.ts';
 import { boundsOf, bucketByLocation, countByStatus, zonesGeoJson } from './geo.ts';
 import type { Live } from './useLiveSos.ts';
@@ -26,8 +26,8 @@ type Props = {
 
 const MAX_DOTS = 8;
 
-// CARTO Voyager without labels: soft land, parks and water for orientation, no street names competing with the pins.
-const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-nolabels-gl-style/style.json';
+// CARTO Voyager: soft land, parks and water, with street and area names for orientation. Marker labels sit on solid chips so they stay readable on top.
+const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const STYLES = { light: BASEMAP_STYLE, dark: BASEMAP_STYLE };
 
 export function useBasemapReachable(): boolean | null {
@@ -56,6 +56,18 @@ function tokenColor(name: string): string {
   return `rgb(${r},${g},${b})`;
 }
 
+/** The basemap prints the city name large across the middle of the scene, under our pins. Hide city and town labels; streets, water and neighbourhoods stay. */
+function QuietCityLabels() {
+  const { map, isLoaded } = useMap();
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+    for (const layer of map.getStyle().layers ?? []) {
+      if (layer.type === 'symbol' && layer['source-layer'] === 'places' && /city|town/.test(layer.id)) map.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  }, [map, isLoaded]);
+  return null;
+}
+
 class MapBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -75,7 +87,7 @@ class MapBoundary extends Component<{ children: ReactNode }, { failed: boolean }
 const isWide = () => window.matchMedia('(min-width: 1024px)').matches;
 /** Keep the depicted area clear of the panels: the rail on desktop, the top bar and sheet peek on phones. */
 function fitPadding() {
-  return isWide() ? { top: 72, bottom: 112, left: 440, right: 96 } : { top: 120, bottom: 128, left: 48, right: 48 };
+  return isWide() ? { top: 72, bottom: 176, left: 440, right: 96 } : { top: 120, bottom: 128, left: 88, right: 88 };
 }
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
@@ -101,8 +113,9 @@ export function MapView({ incident, shelters, locations, selectedId, onSelect, l
   const tags = useMemo(
     () =>
       incident.zones.map((z) => {
-        const [[west], [east, north]] = boundsOf(z.coordinates.map(([lng, lat]) => ({ lat, lng })));
-        return { id: z.id, level: z.level, lng: (west + east) / 2, lat: north };
+        const [[west, south], [east, north]] = boundsOf(z.coordinates.map(([lng, lat]) => ({ lat, lng })));
+        const below = z.level === 'high';
+        return { id: z.id, level: z.level, lng: (west + east) / 2, lat: below ? south : north, anchor: below ? ('top' as const) : ('bottom' as const) };
       }),
     [incident.zones],
   );
@@ -116,11 +129,12 @@ export function MapView({ incident, shelters, locations, selectedId, onSelect, l
       ) : (
         <MapBoundary>
           <Map theme="light" styles={reachable ? STYLES : undefined} blank={!reachable} bounds={bounds} fitBoundsOptions={{ padding, maxZoom: 14 }}>
+            <QuietCityLabels />
             <MapGeoJSON id="zones-moderate" data={moderate} fillPaint={paint.moderate.fill} linePaint={paint.moderate.line} />
             <MapGeoJSON id="zones-high" data={high} fillPaint={paint.high.fill} linePaint={paint.high.line} />
 
             {tags.map((t) => (
-              <MapMarker key={t.id} longitude={t.lng} latitude={t.lat} anchor="bottom">
+              <MapMarker key={t.id} longitude={t.lng} latitude={t.lat} anchor={t.anchor}>
                 <MarkerContent>
                   <span className={styles.zoneTag}>{ZONE_SHORT[t.level]}</span>
                 </MarkerContent>
@@ -133,6 +147,9 @@ export function MapView({ incident, shelters, locations, selectedId, onSelect, l
                   <span className={styles.shelterPin} role="img" aria-label={`${s.name}. ${s.sourceLabel}`}>
                     <House size={16} aria-hidden />
                   </span>
+                  <MarkerLabel position="bottom" className={`text-xs ${styles.chip}`}>
+                    {s.name.replace(' (fictional)', '')}
+                  </MarkerLabel>
                 </MarkerContent>
                 <MarkerTooltip>
                   <div className={styles.tip}>
@@ -164,6 +181,11 @@ export function MapView({ incident, shelters, locations, selectedId, onSelect, l
                     >
                       {l.id}
                     </button>
+                    {l.id === selectedId && (
+                      <MarkerLabel position="top" className={`text-xs ${styles.chip} ${styles.chipRight}`}>
+                        Your location
+                      </MarkerLabel>
+                    )}
                     <span className={styles.cluster} aria-hidden>
                       {shown.map((r, i) => (
                         <span key={r.id} className={`${styles.dot} ${styles[r.status]} ${r.id === ownId ? styles.own : ''}`} style={{ '--a': `${-90 + (i * 360) / shown.length}deg` } as CSSProperties} />

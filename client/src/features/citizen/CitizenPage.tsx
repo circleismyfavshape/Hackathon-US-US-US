@@ -129,7 +129,7 @@ export default function CitizenPage() {
           <div className={styles.requestHead}>
             <div className={styles.requestTitleRow}>
               <h2 className={styles.sectionTitle}>{sos ? 'Your request (demo)' : 'Ask for help (demo)'}</h2>
-              <Button className={styles.sheetToggle} variant={open ? 'ghost' : 'primary'} size="sm" aria-expanded={open} aria-controls="request-body" onClick={() => setOpen((o) => !o)}>
+              <Button className={styles.sheetToggle} variant={open ? 'ghost' : 'primary'} size="md" aria-expanded={open} aria-controls="request-body" onClick={() => setOpen((o) => !o)}>
                 {open ? 'Collapse' : sos ? 'Show request' : 'Ask for help'}
               </Button>
             </div>

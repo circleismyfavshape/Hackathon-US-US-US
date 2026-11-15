@@ -175,7 +175,7 @@
   .incident { position: absolute; z-index: 4; top: 8px; left: 8px; right: 8px; padding: 8px 12px; gap: 2px; }
   .countsMobile { display: block; }
   .legendInAbout { display: block; }
-  .live, .zoneTag { display: none; }
+  .live { display: none; }
   /* Keep the basemap attribution (a licence requirement) above the sheet's peek. */
   .map :global(.maplibregl-ctrl-bottom-right) { bottom: 96px; }
   .request {
@@ -196,6 +196,17 @@
   .loading, .loadError { top: 8px; left: 8px; right: 8px; width: auto; max-width: none; }
 }
 
+/* Touch and phones: pins get a 44px target. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .pin { min-width: 44px; height: 44px; }
+  .shelterPin { width: 36px; height: 36px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pin, .dot { transition-duration: 0.01ms; }
 }
+
+/* Marker labels sit on a solid chip so they read over street names and the basemap's own place labels. */
+.chip { padding: 2px 8px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-raised); box-shadow: var(--shadow-resting); font-weight: 500; }
+/* Beside the pin, past the ring of request dots, instead of above or below where they fan out. */
+.chipRight { top: 50%; bottom: auto; left: 100%; margin: 0 0 0 30px; translate: 0 -50%; }
