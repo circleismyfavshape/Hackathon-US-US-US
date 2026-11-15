@@ -1,59 +1,161 @@
-# Hackathon agent board
+<p align="center">
+  <img src="docs/flare-logo.jpg" alt="FLARE" width="260" />
+</p>
 
-![The hacking floor at Cal Hacks](docs/banner.jpg)
+<h1 align="center">FLARE</h1>
 
-One pinned GitHub issue that every teammate's coding agent posts to. Agents tag each other by GitHub username, and each one waits for its own tag, so my agent can hand work to my teammate's agent without either of us sending a text.
+<p align="center"><strong>From the first alert to the last unmet need.</strong></p>
 
-Full walkthrough with the templates and an FAQ: **[marvelous-relative-5de.notion.site/hack](https://marvelous-relative-5de.notion.site/hack)**
+<p align="center">A disaster response and recovery platform that follows one request for help<br />from the person who sends it to the supplies that still have to reach them.</p>
+
+> **Hackathon demonstration.** The flood areas, shelters, teams and requests are simulated. Nothing sent here reaches an emergency service. In a real emergency call 999.
+
+---
+
+## The problem
+
+During a flood, the alert, the call for help and the relief stock usually live in three separate systems. A citizen gets a warning in one place, asks for help in another, and nobody can see whether supplies ever reached them. Each handover is a place where a person gets lost.
+
+## What FLARE does
+
+FLARE keeps all three on one line. A single request keeps the same ID from the moment it is sent until it is resolved, and the same scenario feeds the citizen, the responder and the recovery planner.
+
+| | Interface | Route | What it proves |
+|---|---|---|---|
+| 01 | **Citizen** | `/citizen` | A live map of every flood area with a feed of sourced updates. Pick an area, check your location, send a request, get a real ID back and watch its status change. |
+| 02 | **First responder** | `/responder` | That same request, with the same ID, appears in a live queue and on the map. Assigning a team or resolving it reaches the citizen within seconds. |
+| 03 | **Recovery** | `/recovery` | When stock is short, four allocation strategies give different centres the shortfall. Every unit is shown; nothing is hidden in a total. |
+
+The front door (`/`) is a phone on its lock screen with one **EMERGENCY FLOOD** notification. Opening the notification opens the citizen interface, the way it would start for a real person.
+
+| Citizen | First responder | Recovery |
+|---|---|---|
+| ![Citizen map and flood areas](docs/screenshots/02-citizen-overview.png) | ![Responder queue](docs/screenshots/06-responder-queue.png) | ![Recovery strategies](docs/screenshots/10-recovery.png) |
+
+## Quick start
+
+Requires **Node 20.19 or newer** and npm.
+
+```bash
+npm install
+```
+
+```bash
+npm start
+```
+
+`npm start` builds the client and serves everything on <http://localhost:8787>.
+
+| Command | What it does |
+|---|---|
+| `npm start` | Build the client, then serve the app and API on `:8787` |
+| `npm run dev` | Live reload: client on `:5173`, API on `:8787` |
+| `npm test` | Server, API and allocation engine tests |
+| `npm run build` | Client build and server typecheck |
+| `npm run typecheck` | Typecheck both workspaces |
+
+The server reads `index.html` once at startup, so restart it after a rebuild.
+
+### Optional environment variables
+
+| Variable | Effect |
+|---|---|
+| `PORT` | Port for the server. Default `8787`. |
+| `FLARE_LIVE_ALERTS=1` | The updates feed shows official MET Malaysia weather warnings (via `api.data.gov.my`, no key needed) instead of the simulated ones. Needs internet. Off by default. See [docs/REAL_DATA.md](docs/REAL_DATA.md). |
+| `ANTHROPIC_API_KEY` | Recovery offers an AI summary of the allocation engine's numbers. Without it the button hides itself. |
+
+The map needs internet for street tiles. Offline it falls back to zones and pins on a blank canvas, and without WebGL the panels still work.
+
+## Demo in 90 seconds
+
+Use two browser tabs on one server. The full script, with fallbacks, is in [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md).
+
+1. **`/`** Read the headline, then tap the **EMERGENCY FLOOD** notification on the phone.
+2. **Citizen.** Open **Shah Alam**, pick a location inside the high-impact zone, choose *Trapped*, 3 people, add a line, and send. Read out the request ID.
+3. **`/responder`** in the second tab. The same ID is at the top of the queue and pulsing on the map. Assign a team.
+4. Back on the citizen tab it already says *Team assigned*. Mark it resolved on the responder tab and the citizen tab follows.
+5. **`/recovery`** "280 units short. Who goes without?" Step through the four strategies: *Priority first* leaves one centre with 7%; *Proportional* gives everyone about 65%.
+
+**Reset demo**, at the bottom of the responder detail panel, clears every request before a pitch.
+
+### Phone view
+
+`/phone/citizen` and `/phone/responder` (or the **Phone view** button in the header) show the same live page inside a phone frame at real phone size. It scrolls, and notifications drop in at the top like push alerts.
 
 ## How it works
 
 ```mermaid
-sequenceDiagram
-    participant A as Sam's agent
-    participant B as Board (pinned issue)
-    participant C as Priya's agent
-    A->>B: [Sam's Claude] login page is merged, @priya-dev can you add the API route?
-    Note over C: tools/board wait wakes up on the @priya-dev tag
-    B->>C: new post, flagged MENTION
-    C->>B: [Priya's Codex] @sam-dev the route is up on main
+flowchart LR
+    C[Citizen<br/>/citizen] -- "POST /api/sos" --> S[(Hono server<br/>in-memory store)]
+    S -- "status, polled every 2.5 s" --> C
+    R[First responder<br/>/responder] -- "PATCH /api/sos/:id" --> S
+    S -- "live queue" --> R
+    S -- "needs and stock" --> E[Allocation engine<br/>4 strategies]
+    E --> V[Recovery<br/>/recovery]
+    M[MET Malaysia<br/>optional] -. "official warnings" .-> S
 ```
 
-1. Split the project up at kickoff and give each person their own folders. The owner table in `AGENTS.md` says whose folders are whose, and every agent reads it.
-2. Pin one issue as the board. Every agent posts there when it finishes something or needs something.
-3. Tag the teammate. Each agent keeps `tools/board wait` running, which wakes it up when someone else posts and flags the post when it tags you.
+- **One server.** A single [Hono](https://hono.dev) server holds the scenario and every request in memory and serves the built client. There is no database and no sign-in.
+- **One contract.** The client and server share types and seed data from [`contracts/`](contracts/). The API is documented in [contracts/API_CONTRACT.md](contracts/API_CONTRACT.md).
+- **One map.** Citizen and responder use the same map component, zones, pins and legend.
+- **A real allocation engine.** `server/src/recovery/` compares *priority first*, *proportional*, *equal share* and an *optimized* integer program (GLPK.js). It is pure and deterministic: allocated plus unmet always equals what was requested.
 
-## Used at
+### Tech stack
 
-My teams ran this at two hackathons, and both boards are public if you want to scroll through them.
-
-- **Knight Hacks**, UCF's hackathon. The [Farsight board](https://github.com/azizu06/farsight/issues/24) hit 1,182 posts, and Farsight won four sponsor tracks.
-- **Cal Hacks**, UC Berkeley's hackathon. The [Backrooms board](https://github.com/azizu06/backrooms/issues/1) hit 988 posts, and Backrooms won a Hyphenate track prize.
-
-## Setup in 5 minutes
-
-1. Click **Use this template** to make your hackathon repo from this one.
-2. Open a new issue from the **Message board** template and pin it. If it's the first issue in the repo it's #1 and you can skip the next step.
-3. If it isn't issue #1, every teammate sets `export BOARD_ISSUE=<number>`.
-4. Fill in your team's GitHub logins and the owner table in `AGENTS.md`.
-5. Every teammate runs `gh auth login` once, then `tools/board whoami` to check it works.
-
-## Commands
-
-| Command | What it does |
+| Layer | Tools |
 |---|---|
-| `tools/board post "[Sam's Claude] ..."` | Posts to the board. Every post starts with whose agent it is. |
-| `tools/board unread` | Shows posts since your last check and flags the ones that tag you. |
-| `tools/board wait` | Blocks until someone else posts, then prints it. |
-| `tools/board read -n 20` | Shows the last 20 posts. |
-| `tools/board whoami` | Prints your GitHub login so you can check `gh` is set up. |
+| Client | React 19, TypeScript, Vite 6, Tailwind CSS 4, MapLibre GL (through mapcn), Lucide icons, Geist |
+| Server | Node, Hono, tsx, GLPK.js, Anthropic SDK (optional summary) |
+| Tests | Node's built-in test runner |
 
-`tools/board wait` checks once every 30 seconds, and when nothing is new that check is one API call, so a whole team stays well under GitHub's rate limit. Use `--interval 60` if a lot of agents share one account.
+## Project structure
 
-## Works with any coding agent
+```
+client/
+  src/
+    App.tsx                 Routes only
+    flare/                  The whole front end
+      flare.css, extra.css  Design system
+      ui.tsx                Shared shell, notifications
+      FlareMap.tsx          Shared map
+      Landing.tsx           Lock screen front door
+      Citizen.tsx  Responder.tsx  Recovery.tsx  Phone.tsx
+    shared/                 Typed API client, logo
+    features/citizen/geo.ts Map geometry (tested on the server side)
+    components/ui/map.tsx   mapcn map component
+contracts/                  API contract, shared types, seed data
+server/
+  src/
+    app.ts, index.ts        HTTP routes and startup
+    store/, seed/, routes/  In-memory store, fixtures, validation
+    recovery/               Allocation engine and AI summary
+    live/met.ts             Optional MET Malaysia warnings
+  tests/                    API, geometry, engine and live-feed tests
+docs/
+  DEMO_RUNBOOK.md           The pitch, step by step
+  REAL_DATA.md              What is real, what is simulated, and why
+  screenshots/              Backup screenshots of every demo step
+  process/                  Planning documents from the hackathon
+```
 
-The script only needs `bash` and `gh`, so any agent that can run a shell command can use it. Claude Code also gets the hooks in `.claude/`, which show unread posts when a session starts and on every prompt, and `CLAUDE.md` pulls in the rules from `AGENTS.md`. Every other agent reads `AGENTS.md` and runs `tools/board unread` before each task.
+## Design rules
 
-## Requirements
+- Paper and ink, hairline rules, mono labels for data. Use the classes in `flare.css`; do not add a new colour, font, radius or shadow.
+- Orange is the only signal colour and always means "needs attention". Amber means in progress, green means done.
+- The same words everywhere: *Pending*, *Team assigned*, *Resolved*.
+- Say what is simulated in plain words. Never imply an area is safe or that a route is suggested.
 
-`bash`, `git`, and the [GitHub CLI](https://cli.github.com) logged in with `gh auth login`.
+## Limits
+
+Synthetic data only, apart from the optional MET Malaysia warnings. No sign-in. Requests are held in memory and reset when the server restarts. Zones are illustrative, not a measured flood footprint. Shelters and teams are fictional.
+
+## Team
+
+| | GitHub | Role |
+|---|---|---|
+| Khaled | [@jeffyoh312](https://github.com/jeffyoh312) | Team lead, responder workflows, QA |
+| Sajid | [@69sxjid](https://github.com/69sxjid) | Backend, integration, unified front end |
+| Awais | [@Vais1](https://github.com/Vais1) | Citizen experience, map and geometry, live data |
+| Ahmed | [@circleismyfavshape](https://github.com/circleismyfavshape) | Allocation engine, logo |
+
+Built with coding agents working in parallel. They coordinate through a pinned GitHub issue using `tools/board`; the rules are in [AGENTS.md](AGENTS.md).
