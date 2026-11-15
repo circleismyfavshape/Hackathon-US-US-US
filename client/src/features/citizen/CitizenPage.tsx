@@ -35,9 +35,9 @@ async function loadScenario(): Promise<Scenario> {
   return { incident: incidents[0], shelters: shelters.filter((s) => s.incidentId === incidents[0].id), config };
 }
 
-/** The map fills the viewport under the sticky demo banner (D2's DemoBanner). Measure it so the stage fits exactly, including when it wraps on phones. */
+/** The map fills the viewport under the sticky demo banner (D2's DemoBanner), if the app shows one. Measure it so the stage fits exactly, including when it wraps on phones; 0 when there is none. */
 function useBannerHeight(): number {
-  const [h, setH] = useState(36);
+  const [h, setH] = useState(0);
   useLayoutEffect(() => {
     const el = document.querySelector<HTMLElement>('[role="status"][class*="sticky"]');
     if (!el) return;
@@ -123,7 +123,7 @@ export default function CitizenPage() {
       />
 
       <div className={styles.rail}>
-        <IncidentPanel incident={incident} shelters={shelters} live={live} />
+        <IncidentPanel incident={incident} shelters={shelters} live={live} demoNote={bannerH === 0} />
 
         <aside className={`${styles.panel} ${styles.request}`} data-open={open} aria-label={sos ? 'Your request' : 'Ask for help'}>
           <div className={styles.requestHead}>
