@@ -57,6 +57,49 @@ async function assertNoHorizontalOverflow(page) {
   );
 }
 
+test('citizen UI submits an SOS and sees responder assignment and resolution without reload', async () => {
+  const citizen = await newPage();
+  const responder = await newPage();
+  try {
+    await citizen.goto(`${base}/citizen`);
+    await responder.goto(`${base}/responder`);
+    await citizen.getByRole('radio').first().check();
+    await citizen.getByRole('spinbutton').fill('3');
+    await citizen.getByRole('textbox', { name: /What is happening/ }).fill('Fictional two-tab test: three people waiting upstairs.');
+    await citizen.getByRole('button', { name: 'Send demo SOS', exact: true }).click();
+    await citizen.getByTestId('sos-id').waitFor();
+    const id = (await citizen.getByTestId('sos-id').innerText()).trim();
+    assert.match(id, /^SOS-/);
+    assert.equal(await citizen.getByTestId('sos-status').getAttribute('data-status'), 'pending');
+    await responder.locator('.flare-request-row').filter({ hasText: id }).click();
+    await responder.getByRole('button', { name: 'Assign Demo Team' }).click();
+    await citizen.locator('[data-testid="sos-status"][data-status="assigned"]').waitFor();
+    assert.match(await citizen.getByTestId('sos-status').innerText(), /Demo Rescue A/);
+    await responder.getByRole('button', { name: 'Mark Resolved', exact: true }).click();
+    await citizen.locator('[data-testid="sos-status"][data-status="resolved"]').waitFor();
+    assert.equal((await getSos(responder, id)).status, 'resolved');
+    await citizen.screenshot({ path: '.board/citizen-roundtrip.png', fullPage: true });
+    await responder.screenshot({ path: '.board/responder-live.png' });
+  } finally { await citizen.close(); await responder.close(); }
+});
+
+test('all three live recovery strategies render distinct backend allocations without changing stock', async () => {
+  const page = await newPage();
+  try {
+    const before = await (await page.request.get(`${base}/api/recovery`)).json();
+    await page.goto(`${base}/responder`);
+    await page.getByRole('button', { name: 'Compare strategies' }).click();
+    await page.locator('.flare-recovery-allocation').nth(8).waitFor();
+    const waterForA = [];
+    for (let index = 0; index < 3; index++) {
+      waterForA.push(await page.locator('.flare-recovery-result').nth(index).locator('tbody tr').first().locator('td').first().innerText());
+    }
+    assert.deepEqual(waterForA, ['120', '76', '74']);
+    assert.deepEqual(await (await page.request.get(`${base}/api/recovery`)).json(), before);
+    assert.equal(await page.locator('.flare-recovery-error').count(), 0);
+  } finally { await page.close(); }
+});
+
 test("sample queue actions and all strategy tables work without API calls; desktop/mobile fit", async () => {
   const page = await newPage();
   try {
