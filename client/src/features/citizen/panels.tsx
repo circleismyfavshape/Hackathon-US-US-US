@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Badge } from '@/components/arc/badge/badge';
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area';
 import type { Incident, Shelter } from '../../shared/api.ts';
+import { FlareMark } from '../../shared/Logo.tsx';
 import { countByStatus } from './geo.ts';
 import type { Live } from './useLiveSos.ts';
 import { ZONE_SHORT } from './zone.ts';
@@ -50,6 +51,9 @@ export function IncidentPanel({ incident, shelters, live, demoNote }: { incident
   return (
     <header className={`${styles.panel} ${styles.incident}`}>
       <div className={styles.headerTop}>
+        <a href="/" className={styles.brand} aria-label="FLARE home">
+          <FlareMark height={22} aria-hidden />
+        </a>
         <h1 className={styles.title}>{incident.title}</h1>
         <Badge tone="danger" size="sm">
           Severity: {incident.severity}
