@@ -1,4 +1,4 @@
-// FLARE shared contract types — FROZEN v1 (owner: D2 / @69sxjid).
+// FLARE shared contract types — FROZEN v1.1 (owner: D2 / @69sxjid).
 // Imported with `import type` by both client and server. Do not edit without a
 // versioned D2 change announced on the board. See contracts/API_CONTRACT.md.
 
@@ -83,7 +83,8 @@ export type Quantities = Record<Resource, number>;
 export type Centre = { id: string; name: string; priority: number; needs: Quantities };
 export type RecoverySnapshot = { centres: Centre[]; inventory: Quantities };
 
-export const STRATEGIES = ['priority-first', 'proportional', 'equal-share'] as const;
+/** v1.1: 'optimized' added (GLPK.js MIP: maximise the guaranteed minimum share, then priority). */
+export const STRATEGIES = ['priority-first', 'proportional', 'equal-share', 'optimized'] as const;
 export type Strategy = (typeof STRATEGIES)[number];
 
 export type CentreAllocation = { centreId: string; allocated: Quantities; unmet: Quantities };
@@ -95,6 +96,17 @@ export type ComparisonResult = {
   totals: { requested: Quantities; allocated: Quantities; unmet: Quantities };
   explanation: string[];
   assumptions: string[];
+  status: 'demo-only';
+};
+
+/** v1.1: POST /api/recovery/explain. Text is AI-written from the engine's numbers; the numbers
+ *  themselves come only from compareAllocations. */
+export type AiExplanation = {
+  text: string;
+  model: string;
+  source: 'ai';
+  basedOn: Strategy[];
+  disclaimer: string;
   status: 'demo-only';
 };
 

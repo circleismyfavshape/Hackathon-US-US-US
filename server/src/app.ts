@@ -1,11 +1,12 @@
 // The single FLARE Hono app (owner: D2). Demo only — no auth, synthetic data, not an emergency service.
 import { Hono, type Context } from 'hono';
 import type { ApiError } from '../../contracts/types.ts';
+import { AiUnavailableError, explainTradeoffs, type Explainer } from './recovery/explain.ts';
 import { compareAllocations, NotImplementedError } from './recovery/index.ts';
 import { validateSosCreate, validateSosPatch, validateStrategy } from './routes/validate.ts';
 import { DemoStore } from './store/store.ts';
 
-const bad = (c: Context, status: 400 | 404 | 409 | 500 | 501, error: string, details?: string[]) =>
+const bad = (c: Context, status: 400 | 404 | 409 | 500 | 501 | 503, error: string, details?: string[]) =>
   c.json<ApiError>(details ? { error, details } : { error }, status);
 
 async function readJson(c: Context): Promise<unknown> {
@@ -16,7 +17,7 @@ async function readJson(c: Context): Promise<unknown> {
   }
 }
 
-export function createApp(store = new DemoStore()) {
+export function createApp(store = new DemoStore(), explainer: Explainer = explainTradeoffs) {
   const app = new Hono();
 
   app.get('/api/health', (c) => c.json({ status: 'ok', mode: 'demo' }));
@@ -63,6 +64,16 @@ export function createApp(store = new DemoStore()) {
     } catch (e) {
       if (e instanceof NotImplementedError) return bad(c, 501, e.message);
       return bad(c, 500, 'recovery comparison failed');
+    }
+  });
+
+  // P1 (D4): AI-written explanation of the engine's numbers. 503 when no AI credentials.
+  app.post('/api/recovery/explain', async (c) => {
+    try {
+      return c.json(await explainer(structuredClone(store.fixtures.recovery)));
+    } catch (e) {
+      if (e instanceof AiUnavailableError) return bad(c, 503, e.message);
+      return bad(c, 500, 'recovery explanation failed');
     }
   });
 
