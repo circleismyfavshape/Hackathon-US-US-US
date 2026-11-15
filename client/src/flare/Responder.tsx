@@ -1,17 +1,22 @@
-// 02 First responder: the same requests the citizen sent, in a live queue and on the map.
-// Assign a fictional team or resolve; the citizen view follows within seconds.
+// 02 First responder: every request in a live queue and on the map, across all areas.
+// New requests arrive as notifications. Assign a team or resolve; the citizen follows within seconds.
 import { useEffect, useMemo, useState } from 'react';
-import { api, type Sos, type SosPatch, type SosStatus } from '../shared/api.ts';
-import { useScenario, useSosList } from './data.ts';
+import { nearest } from '../features/citizen/geo.ts';
+import { api, type Alert, type Sos, type SosPatch, type SosStatus } from '../shared/api.ts';
+import { ALERT_TITLE, useAlerts, useScenario, useSosList, type Scenario } from './data.ts';
 import { FlareMap, MapLegend } from './FlareMap.tsx';
-import { errText, myt, Shell, StatusTag, TYPE_LABEL } from './ui.tsx';
+import { errText, myt, Shell, StatusTag, Toasts, TYPE_LABEL, TYPE_PHRASE, useArrivals, useToasts } from './ui.tsx';
 
 const FILTERS: ('all' | SosStatus)[] = ['all', 'pending', 'assigned', 'resolved'];
 const FILTER_LABEL = { all: 'All', pending: 'Pending', assigned: 'Assigned', resolved: 'Resolved' } as const;
 
+const placeOf = (s: Pick<Sos, 'location'>, scenario: Scenario | null) => (scenario?.config.demoLocations.length ? nearest(s.location, scenario.config.demoLocations).label : 'Unknown place');
+
 export default function Responder() {
   const { scenario, error } = useScenario();
   const live = useSosList(2000);
+  const feed = useAlerts();
+  const { toasts, push, dismiss } = useToasts();
   const [filter, setFilter] = useState<'all' | SosStatus>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [team, setTeam] = useState('');
@@ -29,6 +34,19 @@ export default function Responder() {
     [live.list, filter],
   );
   const selected = live.list.find((s) => s.id === selectedId) ?? null;
+
+  // Notifications: a new request ("3 people stuck at … — send help") and new flood reports.
+  useArrivals(live.list, live.at !== null && !!scenario, (s: Sos) =>
+    push({
+      id: s.id,
+      title: `${s.people} ${s.people === 1 ? 'person' : 'people'} ${TYPE_PHRASE[s.type]} · ${placeOf(s, scenario)}`,
+      body: s.description,
+      meta: 'Send help · tap to open',
+      tone: 'flare',
+      onClick: () => { setFilter('all'); setSelectedId(s.id); },
+    }),
+  );
+  useArrivals(feed.alerts, feed.loaded, (a: Alert) => push({ id: a.id, title: ALERT_TITLE[a.kind], body: a.text, meta: a.source }));
 
   // Keep something useful selected: the newest pending request, else the newest of any kind.
   useEffect(() => {
@@ -54,7 +72,7 @@ export default function Responder() {
     }
   }
   async function reset() {
-    if (!window.confirm('Clear every demo request and reseed the scenario?')) return;
+    if (!window.confirm('Clear every request and restart the scenario?')) return;
     try {
       await api.resetDemo();
       setSelectedId(null);
@@ -66,6 +84,7 @@ export default function Responder() {
 
   return (
     <Shell path="/responder">
+      <Toasts toasts={toasts} dismiss={dismiss} />
       <div className="fl-work fl-work-ops">
         <section className="fl-pane" aria-label="Request queue" id="sos-queue">
           <div className="fl-stats">
@@ -84,11 +103,11 @@ export default function Responder() {
               ))}
             </div>
             <p className="fl-label" style={{ margin: '10px 2px 0' }} role="status">
-              {live.ok ? (live.at ? `Live · synced ${myt(live.at)} MYT` : 'Connecting…') : 'Connection lost · retrying'}
+              {live.ok ? (live.at ? `Live · ${myt(live.at)}` : 'Connecting…') : 'Connection lost · retrying'}
             </p>
           </div>
           {rows.length === 0 ? (
-            <p className="fl-empty">{live.list.length === 0 ? 'No requests yet. Send one from the Citizen view and it appears here within two seconds.' : 'Nothing in this filter.'}</p>
+            <p className="fl-empty">{live.list.length === 0 ? 'No requests yet.' : 'Nothing in this filter.'}</p>
           ) : (
             <ul className="fl-list">
               {rows.map((s) => (
@@ -100,7 +119,7 @@ export default function Responder() {
                     </span>
                     <p>{s.description}</p>
                     <span className="fl-label" style={{ display: 'block', marginTop: 6 }}>
-                      {TYPE_LABEL[s.type]} · {s.people} {s.people === 1 ? 'person' : 'people'} · {myt(s.createdAt)}
+                      {placeOf(s, scenario)} · {s.people} {s.people === 1 ? 'person' : 'people'} · {myt(s.createdAt)}
                     </span>
                   </button>
                 </li>
@@ -112,11 +131,11 @@ export default function Responder() {
         <div className="fl-mapwrap">
           {scenario ? (
             <>
-              <FlareMap incident={scenario.incident} shelters={scenario.shelters} locations={scenario.config.demoLocations} requests={live.list} mode="responder" selectedRequest={selectedId} onSelectRequest={setSelectedId} />
+              <FlareMap incidents={scenario.incidents} activeId={null} shelters={scenario.shelters} locations={scenario.config.demoLocations} requests={live.list} mode="responder" selectedRequest={selectedId} onSelectRequest={setSelectedId} />
               <MapLegend mode="responder" />
             </>
           ) : (
-            <div className="fl-map-fallback">{error ? `Scenario unavailable. ${error}` : 'Loading scenario…'}</div>
+            <div className="fl-map-fallback">{error ? `Map unavailable. ${error}` : 'Loading…'}</div>
           )}
         </div>
 
@@ -128,8 +147,8 @@ export default function Responder() {
           )}
           <hr className="fl-rule" style={{ margin: '24px 0 14px' }} />
           <div className="fl-between">
-            <a className="fl-btn fl-btn-quiet fl-btn-sm" href="/recovery">Open RecoveryGap</a>
-            <button type="button" className="fl-btn fl-btn-quiet fl-btn-sm" onClick={reset}>Reset demo</button>
+            <a className="fl-btn fl-btn-quiet fl-btn-sm" href="/recovery" target="_top">Open Recovery</a>
+            <button type="button" className="fl-btn fl-btn-quiet fl-btn-sm" onClick={reset}>Reset</button>
           </div>
         </section>
       </div>
@@ -139,14 +158,14 @@ export default function Responder() {
 
 function Detail({ sos, scenario, team, setTeam, busy, act, error }: {
   sos: Sos;
-  scenario: ReturnType<typeof useScenario>['scenario'];
+  scenario: Scenario | null;
   team: string;
   setTeam: (t: string) => void;
   busy: boolean;
   act: (p: SosPatch) => void;
   error: string | null;
 }) {
-  const point = scenario?.config.demoLocations.find((l) => Math.abs(l.location.lat - sos.location.lat) < 0.006 && Math.abs(l.location.lng - sos.location.lng) < 0.006);
+  const area = scenario?.incidents.find((i) => i.id === sos.incidentId);
   return (
     <div className="fl-stack fl-in">
       <div className="fl-between">
@@ -160,24 +179,25 @@ function Detail({ sos, scenario, team, setTeam, busy, act, error }: {
         <dt>People</dt><dd>{sos.people}</dd>
         <dt>Location</dt>
         <dd>
-          {point ? `${point.id} · ${point.label.replace(/^Demo point /, '')}` : 'Demo area'}
-          <span className="fl-mono fl-dim fl-small" style={{ display: 'block' }}>{sos.location.lat.toFixed(3)}, {sos.location.lng.toFixed(3)} · {sos.locationMode === 'browser-opt-in' ? 'approximate' : 'demo point'}</span>
+          {placeOf(sos, scenario)}
+          <span className="fl-mono fl-dim fl-small" style={{ display: 'block' }}>{sos.location.lat.toFixed(3)}, {sos.location.lng.toFixed(3)}{sos.locationMode === 'browser-opt-in' ? ' · approximate' : ''}</span>
         </dd>
-        <dt>Received</dt><dd>{myt(sos.createdAt)} MYT</dd>
+        {area && (<><dt>Area</dt><dd>{area.title}</dd></>)}
+        <dt>Received</dt><dd>{myt(sos.createdAt)}</dd>
         <dt>Team</dt><dd>{sos.assignedTeam ?? 'Not assigned'}</dd>
-        {sos.status !== 'pending' && (<><dt>Updated</dt><dd>{myt(sos.updatedAt)} MYT</dd></>)}
+        {sos.status !== 'pending' && (<><dt>Updated</dt><dd>{myt(sos.updatedAt)}</dd></>)}
       </dl>
 
       {sos.status === 'pending' && (
         <div className="fl-stack" style={{ gap: 10 }}>
           <label className="fl-field">
-            <span className="fl-label">Demo team</span>
+            <span className="fl-label">Team</span>
             <select className="fl-input" value={team} onChange={(e) => setTeam(e.target.value)}>
               {scenario?.config.demoTeams.map((t) => <option key={t}>{t}</option>)}
             </select>
           </label>
           <button type="button" className="fl-btn fl-btn-primary fl-btn-block" disabled={busy || !team} onClick={() => act({ status: 'assigned', assignedTeam: team })}>
-            {busy ? 'Saving…' : 'Assign demo team'}
+            {busy ? 'Saving…' : 'Assign team'}
           </button>
         </div>
       )}
@@ -189,9 +209,8 @@ function Detail({ sos, scenario, team, setTeam, busy, act, error }: {
           <button type="button" className="fl-btn fl-btn-quiet fl-btn-sm" style={{ justifySelf: 'start' }} disabled={busy} onClick={() => act({ status: 'pending' })}>Return to pending</button>
         </div>
       )}
-      {sos.status === 'resolved' && <div className="fl-note">Resolved by {sos.assignedTeam ?? 'the demo responder'}. The citizen view shows this now.</div>}
+      {sos.status === 'resolved' && <div className="fl-note">Resolved by {sos.assignedTeam ?? 'the response team'}.</div>}
       {error && <div className="fl-error" role="alert">{error}</div>}
-      <p className="fl-small fl-dim" style={{ margin: 0 }}>Assignments are fictional. No emergency service receives these requests.</p>
     </div>
   );
 }

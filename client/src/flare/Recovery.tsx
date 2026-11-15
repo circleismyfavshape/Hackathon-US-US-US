@@ -1,4 +1,4 @@
-// 03 RecoveryGap: the same scarce stock, split four ways. Every number comes from the engine
+// 03 Recovery: the same scarce stock, split four ways. Every number comes from the engine
 // (POST /api/recovery/compare). Nothing is calculated in the browser except percentages for display.
 import { useEffect, useState } from 'react';
 import { api, type ComparisonResult, type Strategy } from '../shared/api.ts';
@@ -58,14 +58,12 @@ export default function Recovery() {
     <Shell path="/recovery">
       <main className="fl-page" style={{ paddingBottom: 64 }} id="recovery">
         <header className="fl-rhead">
-          <p className="fl-label">03 RecoveryGap · fictional demand and stock</p>
+          <p className="fl-label">03 Recovery · relief supplies</p>
           <h1 className="fl-h1">{totalShort ? `${totalShort} units short.` : 'Supply and demand.'} Who goes without?</h1>
-          <p className="fl-dim" style={{ maxWidth: '62ch', margin: 0 }}>
-            Three relief centres ask for more water, food and hygiene kits than the store holds. Compare four ways to split it. This is a planning comparison: nothing is dispatched and the stock never changes.
-          </p>
+          <p className="fl-dim" style={{ maxWidth: '62ch', margin: 0 }}>Three relief centres need more than the store holds. Compare four ways to share it.</p>
         </header>
 
-        {error && <div className="fl-error" role="alert">Scenario unavailable. {error}</div>}
+        {error && <div className="fl-error" role="alert">Data unavailable. {error}</div>}
 
         {rec && (
           <section className="fl-ledger" aria-label="Requested against stock">
@@ -120,9 +118,7 @@ export default function Recovery() {
                 })}
               </tbody>
             </table>
-            <p className="fl-small fl-dim" style={{ marginTop: 12 }}>
-              Every strategy hands out all the scarce stock, so the total shortfall is the same. What changes is who carries it. Priority numbers are fictional and are not a triage judgement.
-            </p>
+            <p className="fl-small fl-dim" style={{ marginTop: 12 }}>The total shortfall is the same every time. What changes is who carries it.</p>
 
             <div style={{ marginTop: 28 }}>
               <h3 className="fl-h3">What the engine reports</h3>
@@ -185,7 +181,7 @@ export default function Recovery() {
             ) : (
               <p className="fl-empty">{failed[picked] ? `This strategy is unavailable. ${failed[picked]}` : 'Calculating…'}</p>
             )}
-            {sel && <p className="fl-small fl-dim" style={{ marginTop: 12 }}>{sel.assumptions.join(' ')}</p>}
+            
           </section>
         </div>
       </main>

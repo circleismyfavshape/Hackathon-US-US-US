@@ -110,4 +110,7 @@ export type AiExplanation = {
   status: 'demo-only';
 };
 
+/** v1.2: live update feed. `at` is when the server released it. */
+export type Alert = { id: string; incidentId: string; kind: 'flood' | 'shelter' | 'update'; text: string; source: string; at: string };
+
 export type ApiError = { error: string; details?: string[] };

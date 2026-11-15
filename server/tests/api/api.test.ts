@@ -32,7 +32,7 @@ describe('health + read-only data', () => {
 
   test('incidents and shelters are labelled simulation', async () => {
     const inc = (await (await app.request('/api/incidents')).json()) as any[];
-    assert.equal(inc.length, 1);
+    assert.equal(inc.length, 3);
     assert.equal(inc[0].sourceType, 'simulation');
     assert.ok(inc[0].zones.length >= 1);
     const sh = (await (await app.request('/api/shelters')).json()) as any[];
