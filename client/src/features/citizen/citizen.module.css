@@ -1,0 +1,141 @@
+/* OWNER: D1. Layout for the citizen portal. Colors, type, radii and spacing come from Arc tokens (components/arc/foundation.css). */
+.root {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+}
+
+.page {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: 24px clamp(16px, 4vw, 32px) 48px;
+  display: grid;
+  gap: 24px;
+}
+.page > * { min-width: 0; }
+
+/* Summary: the title leads, everything else is quiet. */
+.header { display: grid; gap: 8px; max-width: 760px; }
+.headerTop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+@media (min-width: 640px) { .title { font-size: var(--text-4xl); } }
+.meta { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.guidance { margin: 4px 0 0; padding-left: 18px; list-style: disc; display: grid; gap: 2px; color: var(--text-secondary); font-size: var(--text-sm); }
+
+/* Mobile reads top to bottom: map, request, shelters. Desktop puts the request beside the map. */
+.columns {
+  display: grid;
+  gap: 32px 40px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "map" "sos" "shelters";
+  align-items: start;
+}
+.columns > * { min-width: 0; }
+.areaMap { grid-area: map; }
+.areaSos { grid-area: sos; }
+.areaShelters { grid-area: shelters; }
+@media (min-width: 1024px) {
+  .columns {
+    grid-template-columns: minmax(0, 1.3fr) minmax(360px, 1fr);
+    grid-template-areas: "map sos" "shelters sos";
+  }
+}
+
+.group { display: grid; gap: 16px; }
+.region { display: grid; gap: 24px; }
+.sectionTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); font-weight: 500; letter-spacing: var(--tracking-display); }
+.stepTitle { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking-display); }
+.hint { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.status { margin: 0; font-size: var(--text-sm); color: var(--foreground); }
+.zoneResult { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+
+.shelters { border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; margin: 0; padding: 0; list-style: none; }
+.shelter { padding: 12px 16px; display: grid; gap: 2px; }
+.shelter + .shelter { border-top: 1px solid var(--border-subtle); }
+.shelterName { font-weight: 500; }
+
+/* Map */
+.mapFrame {
+  position: relative;
+  height: clamp(320px, 56vh, 480px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+.mapFrame > div:not(.mapHint) { height: 100%; }
+.mapHint {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 72px);
+  margin: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+.mapFallback { height: 100%; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--text-secondary); font-size: var(--text-sm); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--text-secondary); }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; flex: none; }
+.swatchHigh { border-color: var(--danger); background: color-mix(in oklab, var(--danger) 30%, transparent); }
+.swatchModerate { border-color: var(--warning); background: color-mix(in oklab, var(--warning) 18%, transparent); }
+.swatchShelter { border-color: var(--info); background: var(--info); border-radius: 3px; }
+.swatchPoint { border-color: var(--border-strong); background: var(--surface); border-radius: var(--radius-pill); }
+.caption { margin: 8px 0 0; font-size: var(--text-sm); color: var(--text-secondary); }
+
+/* A pin is a self-labelled button: the id sits inside it, so no floating text competes with the basemap. */
+.pin {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--shadow-raised);
+  font: 500 var(--text-xs) / 1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+.pin:hover { transform: scale(1.08); }
+.pin[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-foreground); transform: scale(1.12); }
+.shelterPin { display: block; width: 12px; height: 12px; border-radius: 3px; background: var(--info); border: 2px solid var(--surface); box-shadow: var(--shadow-resting); }
+.halo { text-shadow: -1px -1px 0 var(--background), 1px -1px 0 var(--background), -1px 1px 0 var(--background), 1px 1px 0 var(--background), 0 0 4px var(--background); }
+@media (prefers-reduced-motion: reduce) { .pin { transition: none; } }
+
+/* Request form */
+.fields { display: grid; gap: 24px; }
+.submitRow { display: grid; gap: 8px; justify-items: start; }
+.fine { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); }
+@media (max-width: 639px) { .submitRow > button { width: 100%; } }
+
+.tracker { display: grid; gap: 16px; }
+.requestId { display: grid; gap: 2px; }
+.requestIdValue { font-size: var(--text-2xl); font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.details { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; font-size: var(--text-sm); }
+.details dt { color: var(--text-secondary); }
+.details dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+.loading { display: grid; gap: 24px; }
