@@ -15,7 +15,7 @@ export const liveResponderClient: ResponderClient = api;
 
 // Recorded sample responses for the shared seed, not a second allocation engine.
 // These are only available after explicitly choosing Sample mode in the UI.
-const comparisons: Record<ComparisonResult["strategy"], ComparisonResult> = {
+const comparisons: Record<Exclude<ComparisonResult["strategy"], "optimized">, ComparisonResult> = {
   "priority-first": {
     strategy: "priority-first",
     allocations: [
@@ -187,6 +187,10 @@ export function createSampleClient(): ResponderClient {
       return structuredClone(record);
     },
     recovery: async () => structuredClone(seed.recovery),
-    compare: async (strategy) => structuredClone(comparisons[strategy]),
+    compare: async (strategy) => {
+      // v1.1: no recorded sample exists for "optimized"; it is never fabricated here.
+      if (strategy === "optimized") throw new Error("No recorded sample for the optimized strategy. Switch to live mode.");
+      return structuredClone(comparisons[strategy]);
+    },
   };
 }

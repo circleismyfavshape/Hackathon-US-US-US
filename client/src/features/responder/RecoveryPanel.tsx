@@ -15,6 +15,7 @@ const strategies: Strategy[] = [
   "priority-first",
   "proportional",
   "equal-share",
+  "optimized",
 ];
 const resourceNames: Record<Resource, string> = {
   water: "Drinking water",
@@ -25,11 +26,14 @@ const strategyNames: Record<Strategy, string> = {
   "priority-first": "Priority first",
   proportional: "Proportional",
   "equal-share": "Equal share",
+  optimized: "Optimized (GLPK)",
 };
 const strategyDescriptions: Record<Strategy, string> = {
   "priority-first": "Fill fictional centre priority in order.",
   proportional: "Share stock in proportion to requested units.",
   "equal-share": "Share equally while centres still have unmet needs.",
+  optimized:
+    "Guarantee every centre the highest possible share of each request, then go by priority.",
 };
 
 function errorMessage(error: unknown): string {
@@ -60,6 +64,8 @@ export default function RecoveryPanel({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [strategy, setStrategy] = useState<Strategy>("priority-first");
+  // v1.1: sample mode has recorded responses for the three P0 strategies only.
+  const shown = mode === "sample" ? strategies.filter((item) => item !== "optimized") : strategies;
   const [comparing, setComparing] = useState(false);
   const [results, setResults] = useState<
     Partial<Record<Strategy, ComparisonResult>>
@@ -102,13 +108,13 @@ export default function RecoveryPanel({
     setResults({});
     setComparedAt(null);
     const responses = await Promise.allSettled(
-      strategies.map((item) => client.compare(item)),
+      shown.map((item) => client.compare(item)),
     );
     if (version.current !== generation) return;
     const nextResults: Partial<Record<Strategy, ComparisonResult>> = {};
     const nextErrors: Partial<Record<Strategy, string>> = {};
     responses.forEach((response, index) => {
-      const requestedStrategy = strategies[index];
+      const requestedStrategy = shown[index];
       if (response.status === "fulfilled") {
         if (response.value.strategy !== requestedStrategy) {
           nextErrors[requestedStrategy] =
@@ -243,7 +249,7 @@ export default function RecoveryPanel({
                   setStrategy(event.target.value as Strategy)
                 }
               >
-                {strategies.map((item) => (
+                {shown.map((item) => (
                   <option key={item} value={item}>
                     {strategyNames[item]}
                   </option>
@@ -253,7 +259,7 @@ export default function RecoveryPanel({
             <p>
               {strategyDescriptions[strategy]}
               <br />
-              <span>All three strategies are compared side by side.</span>
+              <span>All strategies are compared side by side.</span>
             </p>
             <button
               className="flare-recovery-compare"
@@ -268,7 +274,7 @@ export default function RecoveryPanel({
 
           <div role="status" className="flare-recovery-comparison-status">
             {comparing
-              ? "Requesting allocation results for all three strategies…"
+              ? "Requesting allocation results for all strategies…"
               : comparedAt
                 ? `Comparison requested at ${comparedAt}. Results below are a scenario preview.`
                 : "Choose a focus, then compare. No supplies will be committed."}
@@ -279,7 +285,7 @@ export default function RecoveryPanel({
               aria-label="Allocation strategy comparison"
               aria-busy={comparing}
             >
-              {strategies.map((item) => (
+              {shown.map((item) => (
                 <article
                   className={`flare-recovery-result${strategy === item ? " flare-recovery-result-focused" : ""}`}
                   key={item}
@@ -295,7 +301,7 @@ export default function RecoveryPanel({
                       className="flare-recovery-result-number"
                       aria-hidden="true"
                     >
-                      0{strategies.indexOf(item) + 1}
+                      0{shown.indexOf(item) + 1}
                     </span>
                   </div>
                   <p className="flare-recovery-strategy-description">
