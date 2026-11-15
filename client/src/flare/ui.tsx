@@ -25,6 +25,9 @@ export const EMBEDDED = (() => {
   }
 })();
 
+// Inside the phone frame the page scrolls like a phone: no desktop scrollbar.
+if (EMBEDDED) document.documentElement.classList.add('fl-embedded');
+
 export function Shell({ path, children }: { path: string; children: ReactNode }) {
   const phoneable = path === '/citizen' || path === '/responder';
   return (
@@ -50,6 +53,7 @@ export function Shell({ path, children }: { path: string; children: ReactNode })
           <span className="fl-simtag" role="note">Simulation</span>
         </div>
       </header>
+      <div className="fl-simline" role="note">Simulation. In a real emergency call 999.</div>
       {children}
     </div>
   );
