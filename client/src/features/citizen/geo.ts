@@ -1,5 +1,6 @@
 // OWNER: D1. Pure geometry for the citizen map and zone check. No React, no DOM.
-import type { Incident, LatLng, Ring, Zone } from '../../../../contracts/types.ts';
+import type { FeatureCollection, Polygon } from 'geojson';
+import type { LatLng, Ring, Zone } from '../../../../contracts/types.ts';
 
 export type ZoneHit = Zone['level'] | 'none';
 
@@ -25,29 +26,24 @@ export function nearest<T extends { location: LatLng }>(p: LatLng, items: T[]): 
   return items.reduce((best, it) => (d(it.location) < d(best.location) ? it : best));
 }
 
-export type Projector = {
-  width: number;
-  height: number;
-  xy: (p: LatLng) => [number, number];
-  ring: (r: Ring) => string;
-};
-
-/** Fit every given point into a width x height SVG box with padding. At ~3 deg N the lat/lng scale difference is under 0.2%, so one uniform scale is accurate enough for a schematic. */
-export function projector(points: LatLng[], width = 640, pad = 36): Projector {
+/** [[minLng, minLat], [maxLng, maxLat]] around every point, in the order MapLibre's `bounds` expects. */
+export function boundsOf(points: LatLng[]): [[number, number], [number, number]] {
   const lats = points.map((p) => p.lat);
   const lngs = points.map((p) => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const scale = (width - 2 * pad) / (maxLng - minLng);
-  const height = Math.round((maxLat - minLat) * scale + 2 * pad);
-  const xy = (p: LatLng): [number, number] => [pad + (p.lng - minLng) * scale, pad + (maxLat - p.lat) * scale];
-  const ring = (r: Ring) => r.map(([lng, lat]) => xy({ lat, lng }).map((n) => n.toFixed(1)).join(',')).join(' ');
-  return { width, height, xy, ring };
+  return [
+    [Math.min(...lngs), Math.min(...lats)],
+    [Math.max(...lngs), Math.max(...lats)],
+  ];
 }
 
-export function incidentPoints(incident: Incident, extra: LatLng[]): LatLng[] {
-  const ringPoints = incident.zones.flatMap((z) => z.coordinates.map(([lng, lat]) => ({ lat, lng })));
-  return [incident.location, ...ringPoints, ...extra];
+/** The depicted zones as GeoJSON, with the level and label the map styles from. */
+export function zonesGeoJson(zones: Zone[]): FeatureCollection<Polygon, { level: Zone['level']; label: string }> {
+  return {
+    type: 'FeatureCollection',
+    features: zones.map((z) => ({
+      type: 'Feature',
+      properties: { level: z.level, label: z.label },
+      geometry: { type: 'Polygon', coordinates: [z.coordinates] },
+    })),
+  };
 }

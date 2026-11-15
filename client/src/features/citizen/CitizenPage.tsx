@@ -1,10 +1,18 @@
 // OWNER: D1 (Citizen UI). App.tsx routes /citizen to this default export.
+import '@fontsource-variable/geist';
+import '@fontsource-variable/inter';
+import '@/components/arc/foundation.css';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Alert } from '@/components/arc/alert/alert';
+import { Badge } from '@/components/arc/badge/badge';
+import { Button } from '@/components/arc/button/button';
+import { Skeleton } from '@/components/arc/skeleton/skeleton';
 import { api, type DemoConfig, type Incident, type Shelter, type Sos } from '../../shared/api.ts';
 import { LocationPicker, type Chosen } from './LocationPicker.tsx';
-import { ScenarioMap } from './ScenarioMap.tsx';
+import { MapView } from './MapView.tsx';
 import { SosForm } from './SosForm.tsx';
 import { SosTracker } from './SosTracker.tsx';
+import styles from './citizen.module.css';
 
 type Scenario = { incident: Incident; shelters: Shelter[]; config: DemoConfig };
 
@@ -45,12 +53,15 @@ export default function CitizenPage() {
   if (error) {
     return (
       <Shell>
-        <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
-          <p className="font-semibold">Could not load the scenario.</p>
-          <p className="text-sm">{error}</p>
-          <button type="button" onClick={load} className="mt-3 rounded-md border border-red-400 bg-white px-3 py-1.5 text-sm font-medium hover:bg-red-100">
-            Try again
-          </button>
+        <div className={styles.group} style={{ maxWidth: 560 }}>
+          <Alert tone="danger" title="We could not load the scenario">
+            {error}. Check that the demo server is running, then try again.
+          </Alert>
+          <div>
+            <Button variant="secondary" onClick={load}>
+              Try again
+            </Button>
+          </div>
         </div>
       </Shell>
     );
@@ -58,7 +69,10 @@ export default function CitizenPage() {
   if (!scenario) {
     return (
       <Shell>
-        <p role="status" className="text-slate-600">Loading the simulated scenario…</p>
+        <div className={styles.loading} aria-busy="true">
+          <Skeleton label="Loading the simulated scenario" lines={3} />
+          <Skeleton label="Loading the map" lines={6} />
+        </div>
       </Shell>
     );
   }
@@ -69,44 +83,51 @@ export default function CitizenPage() {
 
   return (
     <Shell>
-      <section aria-labelledby="incident-title" className="rounded-lg border-2 border-red-300 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">SIMULATED</span>
-          <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-900">Severity: {incident.severity}</span>
+      <header className={styles.header}>
+        <div className={styles.headerTop}>
+          <h1 className={styles.title}>{incident.title}</h1>
+          <Badge tone="danger">Severity: {incident.severity}</Badge>
         </div>
-        <h1 id="incident-title" className="mt-2 text-2xl font-semibold">{incident.title}</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className={styles.meta}>
           {incident.sourceLabel}. Updated {new Date(incident.updatedAt).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', dateStyle: 'medium', timeStyle: 'short' })} MYT.
         </p>
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
-          {incident.guidance.map((g) => <li key={g}>{g}</li>)}
+        <ul className={styles.guidance}>
+          {incident.guidance.map((g) => (
+            <li key={g}>{g}</li>
+          ))}
         </ul>
-      </section>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div className="space-y-6">
-          <ScenarioMap incident={incident} shelters={shelters} locations={config.demoLocations} selectedId={chosen?.id ?? null} onSelect={(id) => setChosen({ id, mode: 'manual-demo' })} />
-
-          <section aria-labelledby="shelters-title">
-            <h2 id="shelters-title" className="text-lg font-semibold">Shelters</h2>
-            <ul className="mt-2 space-y-2">
-              {shelters.map((s) => (
-                <li key={s.id} className="rounded-lg border border-slate-300 bg-white p-3 text-sm">
-                  <p className="font-medium">{s.name}</p>
-                  <p className="text-slate-600">{s.sourceLabel}. No route is suggested.</p>
-                </li>
-              ))}
-            </ul>
-          </section>
+      <div className={styles.columns}>
+        <div className={styles.areaMap}>
+          <MapView incident={incident} shelters={shelters} locations={config.demoLocations} selectedId={chosen?.id ?? null} onSelect={(id) => setChosen({ id, mode: 'manual-demo' })} />
         </div>
 
-        <div className="space-y-4">
+        <section aria-labelledby="shelters-title" className={`${styles.group} ${styles.areaShelters}`}>
+          <h2 id="shelters-title" className={styles.sectionTitle}>
+            Shelters
+          </h2>
+          <ul className={styles.shelters}>
+            {shelters.map((s) => (
+              <li key={s.id} className={styles.shelter}>
+                <span className={styles.shelterName}>{s.name}</span>
+                <span className={styles.hint}>{s.sourceLabel}. No route is suggested.</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div className={`${styles.region} ${styles.areaSos}`}>
           {sos ? (
             <SosTracker sos={sos} onUpdate={setSos} onGone={clear} onNew={clear} />
           ) : (
             <>
-              <h2 className="text-lg font-semibold">Ask for help (demo)</h2>
-              <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">This is a simulation. No real responder or emergency service receives your request. In a real emergency, contact the official authorities.</p>
+              <section aria-labelledby="sos-title" className={styles.group} style={{ gap: 4 }}>
+                <h2 id="sos-title" className={styles.sectionTitle}>
+                  Ask for help (demo)
+                </h2>
+                <p className={styles.hint}>Simulation only. No real responder receives this. In a real emergency, contact the official authorities.</p>
+              </section>
               <LocationPicker incident={incident} locations={config.demoLocations} chosen={chosen} onChoose={setChosen} />
               <SosForm incidentId={incident.id} location={location} onCreated={created} />
             </>
@@ -118,5 +139,9 @@ export default function CitizenPage() {
 }
 
 function Shell({ children }: { children: ReactNode }) {
-  return <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">{children}</main>;
+  return (
+    <div className={styles.root}>
+      <main className={styles.page}>{children}</main>
+    </div>
+  );
 }
