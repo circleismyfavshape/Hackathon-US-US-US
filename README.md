@@ -26,7 +26,10 @@ FLARE keeps all three on one line. A single request keeps the same ID from the m
 | 02 | **First responder** | `/responder` | That same request, with the same ID, appears in a live queue and on the map. Assigning a team or resolving it reaches the citizen within seconds. |
 | 03 | **Recovery** | `/recovery` | When stock is short, four allocation strategies give different centres the shortfall. Every unit is shown; nothing is hidden in a total. |
 
-The front door (`/`) is a phone on its lock screen with one **EMERGENCY FLOOD** notification. Opening the notification opens the citizen interface, the way it would start for a real person.
+The front door (`/`) has two views with a **Phone / Desktop** switch at the top:
+
+- **Phone** (default): a phone on its lock screen with one **EMERGENCY FLOOD** notification. Opening the notification opens the citizen interface, the way it would start for a real person.
+- **Desktop** (`/?view=desktop`): the three interfaces as numbered rows, each with a live figure.
 
 | Citizen | First responder | Recovery |
 |---|---|---|
@@ -55,6 +58,8 @@ npm start
 | `npm run typecheck` | Typecheck both workspaces |
 
 The server reads `index.html` once at startup, so restart it after a rebuild.
+
+If a page says **Map unavailable** or "The FLARE API server is not running", the client is up but the API on `:8787` is not. Stop everything and run `npm run dev` again; it now stops both halves if either one dies, so it never runs half-started.
 
 ### Optional environment variables
 
