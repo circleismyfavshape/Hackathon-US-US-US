@@ -234,6 +234,14 @@ html body { background: #f4f1ea; }
 .fl-hero { padding: clamp(40px, 8vw, 104px) 0 clamp(28px, 5vw, 64px); display: grid; gap: 28px; }
 .fl-hero p { max-width: 56ch; font-size: clamp(16px, 1.5vw, 19px); color: var(--ink-2); margin: 0; }
 .fl-hero em { font-style: normal; color: var(--flare-ink); }
+.fl-index { border-top: 1px solid var(--ink); }
+.fl-index a { display: grid; grid-template-columns: 64px minmax(0, 1.1fr) minmax(0, 1.4fr) auto; gap: 20px; align-items: baseline; padding: 26px 8px; border-bottom: 1px solid var(--ink); transition: background 0.18s, color 0.18s, padding 0.18s; }
+.fl-index a:hover { background: var(--ink); color: var(--paper); padding-left: 20px; padding-right: 20px; }
+.fl-index a:hover .fl-dim, .fl-index a:hover .fl-label { color: rgba(244, 241, 234, 0.65); }
+.fl-index a:hover .fl-live { color: var(--flare); }
+.fl-index h2 { font-size: clamp(26px, 3.4vw, 44px); letter-spacing: -0.03em; line-height: 1; font-weight: 600; margin: 0; }
+.fl-index .fl-live { font-family: var(--mono); font-size: 13px; color: var(--flare-ink); white-space: nowrap; display: flex; align-items: center; gap: 10px; }
+@media (max-width: 860px) { .fl-index a { grid-template-columns: 36px 1fr; gap: 6px 12px; padding: 20px 4px; } .fl-index a > :nth-child(3), .fl-index a > :nth-child(4) { grid-column: 2; } }
 .fl-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: clamp(32px, 5vw, 64px) 0 0; position: relative; }
 .fl-flow::before { content: ''; position: absolute; left: 0; right: 0; top: 5px; height: 1.5px; background: var(--rule); }
 .fl-flow::after { content: ''; position: absolute; left: 0; top: 4px; width: 80px; height: 3.5px; background: linear-gradient(90deg, transparent, var(--flare)); animation: fl-run 5s linear infinite; }

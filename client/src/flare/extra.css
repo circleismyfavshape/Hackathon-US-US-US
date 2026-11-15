@@ -53,8 +53,16 @@
 button.fl-chip:hover { background: var(--ink); color: var(--paper); transform: translateY(-1px); }
 span.fl-chip { cursor: default; box-shadow: none; opacity: 0.92; }
 
-/* ── Landing (a phone on its lock screen, one alert) ──────────────── */
-.fl-lockpage { min-height: calc(100dvh - var(--top)); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: clamp(24px, 5vw, 72px); padding-top: 24px; padding-bottom: 24px; }
+/* ── Landing: Phone / Desktop switch ──────────────────────────────── */
+.fl-viewswitch { width: 240px; margin-top: 20px; }
+.fl-viewswitch button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+/* Desktop view: three doors, each with one live figure */
+.fl-index a { grid-template-columns: 64px 1fr auto; padding: 34px 8px; align-items: center; }
+.fl-index h2 { font-size: clamp(34px, 5.2vw, 72px); }
+@media (max-width: 860px) { .fl-index a { grid-template-columns: 36px 1fr; } .fl-index a > :nth-child(3) { grid-column: 2; } }
+
+/* ── Landing, phone view (a phone on its lock screen, one alert) ───── */
+.fl-lockpage { min-height: calc(100dvh - var(--top) - 58px); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: clamp(24px, 5vw, 72px); padding-top: 24px; padding-bottom: 24px; }
 .fl-lockpage .fl-hero { padding: 0; }
 .fl-lockpage .fl-h1 { font-size: clamp(40px, 5.4vw, 84px); }
 .fl-lockhint { display: inline-flex; align-items: center; gap: 6px; color: var(--flare-ink); }
@@ -91,7 +99,7 @@ span.fl-chip { cursor: default; box-shadow: none; opacity: 0.92; }
 .fl-lock { transition: background-color 0.4s; }
 .fl-phone-screen.fl-lock[data-opening] { background: var(--paper); }
 @media (max-width: 860px) {
-  .fl-lockpage { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; padding-top: 28px; }
+  .fl-lockpage { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; padding-top: 22px; }
   .fl-lockpage .fl-hero { gap: 14px; }
 }
 
