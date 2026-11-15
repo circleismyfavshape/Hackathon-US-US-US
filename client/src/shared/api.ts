@@ -2,6 +2,7 @@
 // D1/D3: call these instead of fetch() directly so shapes stay in sync.
 import type {
   AiExplanation,
+  Alert,
   ApiError,
   ComparisonResult,
   Incident,
@@ -17,7 +18,7 @@ import type {
 export type * from '../../../contracts/types.ts';
 
 export type DemoConfig = {
-  demoLocations: { id: string; label: string; location: LatLng }[];
+  demoLocations: { id: string; incidentId?: string; label: string; location: LatLng }[];
   demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
   demoTeams: string[];
 };
@@ -45,6 +46,7 @@ async function req<T>(path: string, init?: { method?: string; body?: unknown }):
 export const api = {
   health: () => req<{ status: 'ok'; mode: 'demo' }>('/api/health'),
   incidents: () => req<Incident[]>('/api/incidents'),
+  alerts: () => req<Alert[]>('/api/alerts'),
   shelters: () => req<Shelter[]>('/api/shelters'),
   demoConfig: () => req<DemoConfig>('/api/demo/config'),
   createSos: (body: SosCreate) => req<Sos>('/api/sos', { method: 'POST', body }),
