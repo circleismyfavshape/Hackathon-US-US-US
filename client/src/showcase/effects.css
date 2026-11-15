@@ -1,0 +1,91 @@
+/* FLARE showcase effects (D2 demo, not yet approved). Original CSS, ideas inspired by
+   Aceternity UI's free components: beams, meteors, moving border, aurora, pulses. */
+
+@keyframes fx-beam {
+  from { stroke-dashoffset: 1200; }
+  to { stroke-dashoffset: 0; }
+}
+.fx-beam path {
+  stroke-dasharray: 160 1040;
+  animation: fx-beam 7s linear infinite;
+}
+
+@keyframes fx-meteor {
+  0% { transform: rotate(215deg) translateX(0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(215deg) translateX(-600px); opacity: 0; }
+}
+.fx-meteor {
+  position: absolute;
+  height: 2px;
+  width: 2px;
+  border-radius: 9999px;
+  background: #fda4af;
+  box-shadow: 0 0 0 1px #ffffff10;
+  animation: fx-meteor linear infinite;
+}
+.fx-meteor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 60px;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, #fda4af, transparent);
+}
+
+@keyframes fx-spin { to { transform: rotate(360deg); } }
+.fx-moving-border {
+  position: relative;
+  overflow: hidden;
+  padding: 2px;
+}
+.fx-moving-border::before {
+  content: '';
+  position: absolute;
+  inset: -100%;
+  background: conic-gradient(from 0deg, transparent 0 70%, #f43f5e 80%, #fbbf24 90%, transparent 100%);
+  animation: fx-spin 3s linear infinite;
+}
+.fx-moving-border > * { position: relative; }
+
+@keyframes fx-aurora {
+  0% { background-position: 50% 50%, 50% 50%; }
+  100% { background-position: 350% 50%, 350% 50%; }
+}
+.fx-aurora {
+  background-image:
+    repeating-linear-gradient(100deg, #0b1220 0%, #0b1220 7%, transparent 10%, transparent 12%, #0b1220 16%),
+    repeating-linear-gradient(100deg, #f43f5e 10%, #f59e0b 15%, #38bdf8 20%, #a78bfa 25%, #f43f5e 30%);
+  background-size: 300%, 200%;
+  filter: blur(14px);
+  opacity: 0.45;
+  animation: fx-aurora 40s linear infinite;
+  mask-image: radial-gradient(ellipse at 100% 0%, black 10%, transparent 70%);
+}
+
+@keyframes fx-ping {
+  0% { r: 4; opacity: 0.9; }
+  100% { r: 22; opacity: 0; }
+}
+.fx-ping { animation: fx-ping 1.8s ease-out infinite; }
+
+@keyframes fx-dash { to { stroke-dashoffset: -24; } }
+.fx-dash { stroke-dasharray: 6 6; animation: fx-dash 1s linear infinite; }
+
+@keyframes fx-fade-up {
+  from { opacity: 0; transform: translateY(8px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.fx-fade-up { animation: fx-fade-up 0.5s ease-out both; }
+
+@keyframes fx-twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+.fx-twinkle { animation: fx-twinkle ease-in-out infinite; }
+
+@keyframes fx-grow { from { transform: scaleX(0); } }
+.fx-grow { transform-origin: left; animation: fx-grow 0.9s cubic-bezier(.2,.8,.2,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-beam path, .fx-meteor, .fx-moving-border::before, .fx-aurora, .fx-ping, .fx-dash,
+  .fx-fade-up, .fx-twinkle, .fx-grow { animation: none !important; }
+}
