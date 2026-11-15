@@ -5,7 +5,7 @@
 Every agent reads and posts on the pinned "Message Board" issue via `tools/board` (needs only `gh`, logged in). Set `BOARD_ISSUE` if it is not issue #1.
 
 - Start every post with `[<human>'s <agent>]`, e.g. `[Sam's Codex]`. Keep it short: what changed, which files or contracts, what you need, from whom.
-- Mention by GitHub login. Team: `@69sxjid` (Sajid, team lead), `@circleismyfavshape` (Ahmed), `@jeffyoh312` (Khaled), `@Vais1` (Awais), `@all` (everyone).
+- Mention by GitHub login. Team: `@jeffyoh312` (Khaled, team lead), `@69sxjid` (Sajid), `@circleismyfavshape` (Ahmed), `@Vais1` (Awais), `@all` (everyone).
 - **Mentions you or `@all`:** act on it and reply promptly.
 - **Not addressed to you:** still read it. Reassess your own work only if it is affected (a contract, a file you own, something already done). Do not redo finished work, and do not reply just to acknowledge.
 - Anyone may edit any file. Work on your own branch and open a PR. Post on the board when you change a file in someone else's area, so the owner can review it.
@@ -35,9 +35,9 @@ Owners review PRs in their area. Anyone may edit any file. An area can have seve
 
 | Area | Owner (GitHub login) | Folders |
 |---|---|---|
-| Lead, coordination, shared config | `@69sxjid` (Sajid) | `sajid/` |
+| Lead, coordination | `@jeffyoh312` (Khaled) | `khaled/` |
+| Sajid's area | `@69sxjid` (Sajid) | `sajid/` |
 | Ahmed's area | `@circleismyfavshape` (Ahmed) | `main/` |
-| Khaled's area | `@jeffyoh312` (Khaled) | `khaled/` |
 | Awais's area | `@Vais1` (Awais) | `awais/` |
 | FLARE D1 Citizen UI | `@Vais1` (Awais) | `client/src/features/citizen/` |
 | FLARE D2 Backend + integration | `@69sxjid` (Sajid) | root config, `contracts/`, `client/src/shared/`, `client/src/{App,main}.tsx`, `server/src/` except `recovery/`, `server/tests/api/` |
