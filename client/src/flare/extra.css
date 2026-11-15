@@ -4,10 +4,12 @@
 .fl-sim::before { display: none; }
 .fl-simtag { display: inline-flex; align-items: center; gap: 7px; }
 .fl-simtag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--flare); animation: fl-blink 2.4s ease-in-out infinite; }
+/* Phones: the header tag is replaced by a strip under the header (.fl-simline), so nothing floats over content. Touch targets are 44px. */
 @media (max-width: 860px) {
-  .fl-sim { display: flex; position: absolute; right: 12px; top: calc(var(--top) + 8px); z-index: 30; }
-  .fl-sim .fl-btn { display: none; }
-  .fl-simtag { padding: 3px 8px; background: var(--card); border: 1px solid var(--ink); border-radius: 3px; font-size: 10px; }
+  .fl-sim { display: none; }
+  .fl-seg button { height: 44px; }
+  .fl-btn-sm { height: 44px; padding: 0 14px; }
+  .fl-step { height: 48px; }
 }
 
 /* ── Notifications (banner style, top of screen) ──────────────────── */
@@ -69,3 +71,7 @@ span.fl-chip { cursor: default; box-shadow: none; opacity: 0.92; }
 .fl-phone-home { position: absolute; left: 50%; bottom: 7px; width: 132px; height: 5px; margin-left: -66px; border-radius: 3px; background: rgba(22, 21, 15, 0.85); z-index: 3; pointer-events: none; }
 .fl-app[data-embedded] { --top: 50px; }
 .fl-app[data-embedded] .fl-toasts { top: 6px; }
+
+html.fl-embedded { scrollbar-width: none; }
+html.fl-embedded::-webkit-scrollbar, html.fl-embedded *::-webkit-scrollbar { display: none; }
+html.fl-embedded * { scrollbar-width: none; }
