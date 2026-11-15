@@ -21,10 +21,10 @@ npm run build      # client build + server typecheck
 
 | Slot | Paths |
 |---|---|
-| D1 Citizen UI | `client/src/features/citizen/**` |
+| D1 Citizen UI (`@Vais1`) | `client/src/features/citizen/**` |
 | D2 Backend + integration (`@69sxjid`) | root config, `contracts/**`, `client/src/{App,main}.tsx`, `client/src/shared/**`, `server/src/**` except `recovery/`, `server/tests/api/**` |
-| D3 Responder UI | `client/src/features/responder/**` |
-| D4 RecoveryGap engine | `server/src/recovery/**`, `server/tests/recovery/**` |
+| D3 Responder UI (`@jeffyoh312`) | `client/src/features/responder/**` |
+| D4 RecoveryGap engine (`@circleismyfavshape`) | `server/src/recovery/**`, `server/tests/recovery/**` |
 
 ## Limitations
 
