@@ -39,3 +39,5 @@ Owners review PRs in their area. Anyone may edit any file. An area can have seve
 | Sajid's area | `@69sxjid` (Sajid) | `sajid/` |
 | Khaled's area | `@jeffyoh312` (Khaled) | `khaled/` |
 | Awais's area | `@Vais1` (Awais) | `awais/` |
+
+FLARE code ownership (the D1–D4 slots and exact paths) is in `FLARE.md` and section 3 of `FLARE_TEAM_AUTOPILOT.md`. The personal folders above are scratch space.
