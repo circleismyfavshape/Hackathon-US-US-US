@@ -10,11 +10,11 @@ import { api, type LatLng, type LocationMode, type Sos, type SosType } from '../
 import { SOS_DISCLAIMER } from '../../shared/DemoBanner.tsx';
 import styles from './citizen.module.css';
 
-const TYPE_OPTIONS: Record<SosType, { label: string; description: string }> = {
-  trapped: { label: 'Trapped', description: 'Cannot get out' },
-  'medical-help': { label: 'Medical help', description: 'Someone is hurt or ill' },
-  supplies: { label: 'Supplies', description: 'Water, food, essentials' },
-  other: { label: 'Other', description: 'Something else' },
+const TYPE_LABEL: Record<SosType, string> = {
+  trapped: 'Trapped',
+  'medical-help': 'Medical help',
+  supplies: 'Supplies',
+  other: 'Other',
 };
 const MAX_DESC = 280;
 
@@ -58,45 +58,40 @@ export function SosForm({ incidentId, location, onCreated }: Props) {
   }
 
   return (
-    <form onSubmit={submit} className={styles.group} noValidate>
-      <h3 className={styles.stepTitle}>What do you need?</h3>
-      <div className={styles.fields}>
-        <NumberField label="People who need help" description="A whole number from 1 to 50." value={people} onValueChange={setPeople} min={1} max={50} step={1} />
-        <div className={styles.group} style={{ gap: 8 }}>
-          <span id="type-label" className={styles.status} style={{ fontWeight: 500 }}>
-            Type of help
-          </span>
-          <RadioCards
-            aria-labelledby="type-label"
-            name="sos-type"
-            layout="grid"
-            minColumnWidth={160}
-            value={type}
-            onValueChange={(v) => setType(v as SosType)}
-            options={SOS_TYPES.map((t) => ({ value: t, label: TYPE_OPTIONS[t].label, description: TYPE_OPTIONS[t].description }))}
-          />
-        </div>
-        <Textarea
-          label="What is happening"
-          description={`No names, phone numbers or addresses. ${text.length} of ${MAX_DESC} characters.`}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={MAX_DESC}
-          rows={3}
+    <form onSubmit={submit} className={styles.group} style={{ gap: 12 }} noValidate>
+      <div className={styles.group} style={{ gap: 6 }}>
+        <p className={styles.fieldLabel} id="type-label">
+          Type of help
+        </p>
+        <RadioCards
+          aria-labelledby="type-label"
+          name="sos-type"
+          layout="grid"
+          minColumnWidth={140}
+          value={type}
+          onValueChange={(v) => setType(v as SosType)}
+          options={SOS_TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))}
         />
+      </div>
+
+      <div className={`${styles.group} ${styles.field}`} style={{ gap: 4 }}>
+        <Textarea label="What is happening" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={MAX_DESC} rows={2} />
+        <p className={styles.hint}>No names, phone numbers or addresses.</p>
       </div>
 
       <Alert tone="danger" title="We could not send your request" open={error !== null}>
         {error}
       </Alert>
 
-      <div className={styles.submitRow}>
+      <div className={styles.sendRow}>
+        <div className={styles.field}>
+          <NumberField label="People" value={people} onValueChange={setPeople} min={1} max={50} step={1} size="sm" />
+        </div>
         <Button type="submit" loading={busy} disabled={!valid}>
           Send demo SOS
         </Button>
-        {!valid && !busy && location !== null && <p className={styles.fine}>Describe what is happening to enable sending.</p>}
-        <p className={styles.fine}>{SOS_DISCLAIMER}</p>
       </div>
+      <p className={styles.fine}>{SOS_DISCLAIMER}</p>
     </form>
   );
 }
