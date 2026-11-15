@@ -24,9 +24,10 @@ after(async () => {
   await browser?.close();
 });
 
-async function newPage() {
+async function newPage(options = {}) {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1100 },
+    ...options,
   });
   page.setDefaultTimeout(10000);
   return page;
@@ -63,8 +64,9 @@ test('citizen UI submits an SOS and sees responder assignment and resolution wit
   try {
     await citizen.goto(`${base}/citizen`);
     await responder.goto(`${base}/responder`);
-    await citizen.getByRole('radio').first().check();
-    await citizen.getByRole('spinbutton').fill('3');
+    await citizen.getByRole('radiogroup', { name: 'Where are you?' }).getByRole('radio', { name: 'L1', exact: true }).click();
+    await citizen.getByRole('spinbutton', { name: 'People', exact: true }).fill('3');
+    await citizen.getByRole('spinbutton', { name: 'People', exact: true }).press('Tab');
     await citizen.getByRole('textbox', { name: /What is happening/ }).fill('Fictional two-tab test: three people waiting upstairs.');
     await citizen.getByRole('button', { name: 'Send demo SOS', exact: true }).click();
     await citizen.getByTestId('sos-id').waitFor();
@@ -83,20 +85,63 @@ test('citizen UI submits an SOS and sees responder assignment and resolution wit
   } finally { await citizen.close(); await responder.close(); }
 });
 
-test('all three live recovery strategies render distinct backend allocations without changing stock', async () => {
+test('all four live recovery strategies render distinct allocations without stock changes or responsive overflow', async () => {
   const page = await newPage();
   try {
     const before = await (await page.request.get(`${base}/api/recovery`)).json();
     await page.goto(`${base}/responder`);
     await page.getByRole('button', { name: 'Compare strategies' }).click();
-    await page.locator('.flare-recovery-allocation').nth(8).waitFor();
+    await page.locator('.flare-recovery-allocation').nth(11).waitFor();
+    assert.equal(await page.locator('.flare-recovery-result').count(), 4);
+    assert.equal(await page.locator('.flare-recovery-allocation table').count(), 12);
     const waterForA = [];
-    for (let index = 0; index < 3; index++) {
+    for (let index = 0; index < 4; index++) {
       waterForA.push(await page.locator('.flare-recovery-result').nth(index).locator('tbody tr').first().locator('td').first().innerText());
     }
-    assert.deepEqual(waterForA, ['120', '76', '74']);
+    assert.deepEqual(waterForA, ['120', '76', '74', '91']);
     assert.deepEqual(await (await page.request.get(`${base}/api/recovery`)).json(), before);
     assert.equal(await page.locator('.flare-recovery-error').count(), 0);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await assertNoHorizontalOverflow(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await assertNoHorizontalOverflow(page);
+  } finally { await page.close(); }
+});
+
+test('responder replaces the yellow global banner with compact simulation context', async () => {
+  const page = await newPage();
+  try {
+    await page.goto(`${base}/responder`);
+    await page.getByText('Simulation workspace', { exact: true }).waitFor();
+    assert.equal(await page.locator('[role="status"][class*="sticky"]').count(), 0);
+    assert.equal(await page.getByText('HACKATHON DEMO — simulated disaster data; not an emergency service.', { exact: true }).count(), 0);
+    const chipHeight = await page.locator('.flare-simulation-chip').evaluate(element => element.getBoundingClientRect().height);
+    assert.ok(chipHeight <= 36, `Simulation context should be compact, got ${chipHeight}px`);
+  } finally { await page.close(); }
+});
+
+test('reduced-motion preference removes long animations and transitions from the responder workspace', async () => {
+  const page = await newPage({ reducedMotion: 'reduce' });
+  try {
+    await page.goto(`${base}/responder?mode=sample`);
+    await page.getByRole('heading', { name: 'SAMPLE-001', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Compare strategies' }).click();
+    await page.locator('.flare-recovery-allocation').nth(8).waitFor();
+    const violations = await page.locator('.flare-ops').evaluate(root => {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return ['Reduced-motion media preference was not applied'];
+      const seconds = value => value.split(',').map(item => parseFloat(item) * (item.trim().endsWith('ms') ? 0.001 : 1));
+      const failures = [];
+      for (const element of [root, ...root.querySelectorAll('*')]) {
+        for (const pseudo of [null, '::before', '::after']) {
+          const style = getComputedStyle(element, pseudo);
+          if ((style.animationName !== 'none' && seconds(style.animationDuration).some(duration => duration > 0.05)) || seconds(style.transitionDuration).some(duration => duration > 0.05)) {
+            failures.push(`${element.tagName}.${element.getAttribute('class') ?? ''}${pseudo ?? ''}: animation=${style.animationDuration}, transition=${style.transitionDuration}`);
+          }
+        }
+      }
+      return failures;
+    });
+    assert.deepEqual(violations, []);
   } finally { await page.close(); }
 });
 
@@ -292,6 +337,11 @@ test("recovery renders each API response, exposes partial errors and rejects mis
           status: 501,
           json: { error: "Engine not merged" },
         });
+      if (strategy === "optimized")
+        return route.fulfill({
+          status: 503,
+          json: { error: "Optimized allocation unavailable for this test" },
+        });
       return route.fulfill({
         json: await samples.compare(
           strategy === "equal-share" ? "priority-first" : strategy,
@@ -304,6 +354,10 @@ test("recovery renders each API response, exposes partial errors and rejects mis
     await page
       .getByRole("alert")
       .filter({ hasText: "different strategy" })
+      .waitFor();
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "Optimized allocation unavailable for this test" })
       .waitFor();
     assert.equal(await page.locator(".flare-recovery-allocation").count(), 3);
     assert.match(

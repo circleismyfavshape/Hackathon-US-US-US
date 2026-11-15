@@ -1,5 +1,8 @@
 // D3 / Khaled — operational actions use the frozen shared API.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { ArrowUpRight, Check, ChevronRight, Clock3, Inbox, LayoutDashboard, MapPin, Package, Radio, RefreshCw, Search, Waves } from "lucide-react";
+import "@fontsource-variable/geist";
 import {
   poll,
   type DemoConfig,
@@ -54,6 +57,7 @@ function Operations({
   mode: Mode;
   onMode: (mode: Mode) => void;
 }) {
+  const reduceMotion = useReducedMotion();
   const client = useMemo<ResponderClient>(
     () => (mode === "sample" ? createSampleClient() : liveResponderClient),
     [mode],
@@ -183,27 +187,27 @@ function Operations({
     <div className="flare-ops">
       <aside className="flare-sidebar" aria-label="Operations navigation">
         <a href="/" className="flare-brand">
-          <FlareMark height={40} className="flare-brand-mark" aria-hidden="true" />
+          <FlareMark height={30} className="flare-brand-mark" aria-hidden="true" />
           <span>
-            FLARE<small>RESPONSE & RECOVERY</small>
+            FLARE<small>OPERATIONS PLATFORM</small>
           </span>
         </a>
         <p className="flare-nav-label">WORKSPACE</p>
         <nav>
           <a href="#operations" className="flare-nav-active">
-            <span aria-hidden="true">▦</span> Operations overview
+            <LayoutDashboard size={17} aria-hidden="true" /> Overview
           </a>
           <a href="#sos-queue">
-            <span aria-hidden="true">◉</span> SOS requests <b>{rows.length}</b>
+            <Inbox size={17} aria-hidden="true" /> SOS requests <b>{rows.length}</b>
           </a>
           <a href="#recovery">
-            <span aria-hidden="true">▤</span> RecoveryGap
+            <Package size={17} aria-hidden="true" /> RecoveryGap
           </a>
         </nav>
         <div className="flare-sidebar-footer">
           <span className="flare-avatar">K</span>
           <div>
-            Responder workspace<small>Simulation access · Team 2</small>
+            Khaled<small>Responder workspace · Team 2</small>
           </div>
         </div>
       </aside>
@@ -213,16 +217,14 @@ function Operations({
             Workspace <span aria-hidden="true">/</span>{" "}
             <strong>Operations</strong>
           </span>
-          <a href="/citizen">
-            Open citizen portal <span aria-hidden="true">↗</span>
-          </a>
+          <div className="flare-topbar-actions"><span className="flare-simulation-chip"><span /> Simulation workspace</span><a href="/citizen">Open citizen portal <ArrowUpRight size={14} aria-hidden="true" /></a></div>
         </header>
         <div className="flare-content">
           <div className="flare-page-heading">
             <div>
-              <p className="flare-eyebrow">FIRST RESPONDER CONTROL ROOM</p>
+              <p className="flare-eyebrow"><span className="flare-eyebrow-line" /> RESPONSE, WITHOUT THE NOISE</p>
               <h1>Operations overview</h1>
-              <p>One shared picture. From incoming requests to recovery.</p>
+              <p>Every request. Every resource. One clear view.</p>
             </div>
             <div className="flare-source-switch" aria-label="Data source">
               <button
@@ -241,23 +243,7 @@ function Operations({
               </button>
             </div>
           </div>
-          <div
-            className={`flare-demo-notice ${mode === "sample" ? "flare-sample-notice" : ""}`}
-          >
-            <span aria-hidden="true">◇</span>
-            <div>
-              <strong>
-                {mode === "sample"
-                  ? "SAMPLE MODE — local preview only"
-                  : "HACKATHON DEMO — simulated disaster data; not an emergency service."}
-              </strong>
-              <p>
-                {mode === "sample"
-                  ? "Isolated fictional responses. Changes stay in this sample session and are not shared with the citizen portal."
-                  : "Assignments are demo only. No emergency service receives these requests."}
-              </p>
-            </div>
-          </div>
+          {mode === "sample" && <div className="flare-sample-notice" role="note"><Radio size={16} aria-hidden="true" /><div><strong>Sample workspace</strong><p>Local preview only. Updates stay in this session and are not shared with the citizen portal.</p></div></div>}
           {contextError && (
             <div className="flare-error" role="alert">
               {contextError}{" "}
@@ -271,7 +257,7 @@ function Operations({
             aria-label="Incident summary"
           >
             <div className="flare-incident-icon" aria-hidden="true">
-              ≋
+              <Waves size={22} strokeWidth={1.5} />
             </div>
             <div>
               <p className="flare-eyebrow">ACTIVE SCENARIO · SIMULATED</p>
@@ -291,13 +277,16 @@ function Operations({
           <section className="flare-metrics" aria-label="Request counts">
             {(["pending", "assigned", "resolved"] as const).map(
               (status, index) => (
-                <div
+                <motion.div
                   key={status}
                   className={`flare-metric flare-metric-${status}`}
+                  initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : .45, delay: reduceMotion ? 0 : index * .07 }}
                 >
                   <div>
                     <p>{statusLabels[status]} requests</p>
-                    <strong>{loading ? "—" : counts[status]}</strong>
+                    <motion.strong key={loading ? 'loading' : counts[status]} initial={reduceMotion ? false : { opacity: .3, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : .2 }}>{loading ? "—" : counts[status]}</motion.strong>
                     <small>
                       {
                         [
@@ -308,8 +297,8 @@ function Operations({
                       }
                     </small>
                   </div>
-                  <span aria-hidden="true">{["◷", "↗", "✓"][index]}</span>
-                </div>
+                  <span aria-hidden="true">{index === 0 ? <Clock3 size={19} /> : index === 1 ? <ArrowUpRight size={19} /> : <Check size={19} />}</span>
+                </motion.div>
               ),
             )}
           </section>
@@ -342,7 +331,7 @@ function Operations({
                   onClick={() => void refreshQueue()}
                   disabled={refreshing || saving}
                 >
-                  {refreshing ? "Refreshing…" : "↻ Refresh"}
+                  <RefreshCw size={13} className={refreshing ? 'flare-is-refreshing' : undefined} aria-hidden="true" />{refreshing ? "Refreshing…" : "Refresh"}
                 </button>
               </div>
             </div>
@@ -384,6 +373,7 @@ function Operations({
                   </div>
                   <label className="flare-search">
                     <span className="flare-sr-only">Search requests</span>
+                    <Search size={15} aria-hidden="true" />
                     <input
                       type="search"
                       placeholder="Search ID, description, team…"
@@ -432,8 +422,11 @@ function Operations({
                     </div>
                   ) : (
                     visible.map((row) => (
-                      <button
+                      <motion.button
                         key={row.id}
+                        initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: reduceMotion ? 0 : .25 }}
                         className={`flare-request-row ${selectedId === row.id ? "is-selected" : ""}`}
                         aria-pressed={selectedId === row.id}
                         onClick={() => {
@@ -445,11 +438,7 @@ function Operations({
                           className={`flare-request-symbol flare-symbol-${row.status}`}
                           aria-hidden="true"
                         >
-                          {row.status === "resolved"
-                            ? "✓"
-                            : row.type === "trapped"
-                              ? "⌂"
-                              : "◉"}
+                          {row.status === "resolved" ? <Check size={17} /> : <Inbox size={17} />}
                         </span>
                         <span className="flare-request-main">
                           <span className="flare-request-top">
@@ -473,9 +462,9 @@ function Operations({
                           className="flare-request-arrow"
                           aria-hidden="true"
                         >
-                          ›
+                          <ChevronRight size={15} />
                         </span>
-                      </button>
+                      </motion.button>
                     ))
                   )}
                 </div>
@@ -519,13 +508,14 @@ function RequestDetails({
   disabled: boolean;
   onUpdate: (id: string, patch: SosPatch) => Promise<void>;
 }) {
+  const reduceMotion = useReducedMotion();
   const [team, setTeam] = useState(row?.assignedTeam ?? "");
   useEffect(() => {
     setTeam(row?.assignedTeam ?? "");
   }, [row?.assignedTeam]);
   const activeTeam = teams.includes(team) ? team : (teams[0] ?? "");
   return (
-    <aside className="flare-card flare-detail" aria-labelledby="detail-heading">
+    <motion.aside className="flare-card flare-detail" aria-labelledby="detail-heading" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : .25 }}>
       <div className="flare-detail-heading">
         <p className="flare-eyebrow">REQUEST DETAILS</p>
         <h3 id="detail-heading">{row?.id ?? "Select a request"}</h3>
@@ -566,7 +556,7 @@ function RequestDetails({
               <p>{row.description}</p>
             </div>
             <div className="flare-location">
-              <span aria-hidden="true">⌖</span>
+              <MapPin size={18} aria-hidden="true" />
               <div>
                 <h4>Approximate demo location</h4>
                 <p>
@@ -639,6 +629,6 @@ function RequestDetails({
           </div>
         </>
       )}
-    </aside>
+    </motion.aside>
   );
 }
