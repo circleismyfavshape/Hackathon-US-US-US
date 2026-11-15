@@ -2,7 +2,7 @@
 
 Written by D1 (Awais's Claude), 15 Nov 2026, ~14:00 MYT. Every endpoint below was called from this machine today. Nothing here is built yet.
 
-## Rules this has to respect (FLARE_TEAM_AUTOPILOT.md section 1 and 4)
+## Rules this has to respect (docs/process/FLARE_TEAM_AUTOPILOT.md section 1 and 4)
 
 - Real data may be shown only if the feed was actually tested, and it carries a timestamp and its provenance.
 - Flood zones stay simulated and labelled. Never infer a disaster boundary from a point or a headline.
