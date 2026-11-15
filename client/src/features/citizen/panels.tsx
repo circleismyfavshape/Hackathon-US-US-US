@@ -46,7 +46,7 @@ export function LiveCounts({ live }: { live: Live }) {
   );
 }
 
-export function IncidentPanel({ incident, shelters, live }: { incident: Incident; shelters: Shelter[]; live: Live }) {
+export function IncidentPanel({ incident, shelters, live, demoNote }: { incident: Incident; shelters: Shelter[]; live: Live; demoNote: boolean }) {
   return (
     <header className={`${styles.panel} ${styles.incident}`}>
       <div className={styles.headerTop}>
@@ -56,6 +56,8 @@ export function IncidentPanel({ incident, shelters, live }: { incident: Incident
         </Badge>
       </div>
       <p className={styles.meta}>{incident.sourceLabel}</p>
+      {/* The blueprint needs a persistent demo label on every view. The app banner carries it; when there is none, this line does. */}
+      {demoNote && <p className={styles.demoNote}>Hackathon demo with simulated data. Not an emergency service.</p>}
       <div className={styles.countsMobile}>
         <LiveCounts live={live} />
       </div>
