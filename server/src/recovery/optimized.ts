@@ -11,11 +11,17 @@
 import GLPK, { type LP } from 'glpk.js/node';
 import { RESOURCES, type Centre, type Quantities, type RecoverySnapshot, type Resource } from '../../../contracts/types.ts';
 
-// WASM loads once at module import; solve() itself is synchronous in Node.
-const glpk = await GLPK();
-const SOLVE_OPTIONS = { msglev: glpk.GLP_MSG_OFF, presol: true };
-
 export class SolverError extends Error {}
+
+// WASM loads once at module import; solve() itself is synchronous in Node.
+// A load failure must not take the server down: the other strategies keep working and
+// only 'optimized' fails (the route answers 500).
+const loaded = await GLPK().catch(() => null);
+
+function solver() {
+  if (!loaded) throw new SolverError('GLPK.js failed to load; the optimized strategy is unavailable');
+  return loaded;
+}
 
 export type OptimizedResult = {
   /** centre id -> whole units per resource */
@@ -27,7 +33,8 @@ export type OptimizedResult = {
 const v = (centreIndex: number, r: Resource) => `a_${centreIndex}_${r}`;
 
 function solve(lp: LP): Record<string, number> {
-  const out = glpk.solve(lp, SOLVE_OPTIONS);
+  const glpk = solver();
+  const out = glpk.solve(lp, { msglev: glpk.GLP_MSG_OFF, presol: true });
   if (out.result.status !== glpk.GLP_OPT) throw new SolverError(`GLPK returned status ${out.result.status} for ${lp.name}`);
   return out.result.vars;
 }
@@ -46,6 +53,7 @@ export function optimize(snapshot: RecoverySnapshot): OptimizedResult {
     for (const r of RESOURCES) if (c.needs[r] > 0) vars.push({ name: v(ci, r), ci, r, need: c.needs[r] });
   });
   if (vars.length === 0) return { allocated, guaranteedPercent: 100 };
+  const glpk = solver();
 
   const stockRows = (prefix: string) =>
     RESOURCES.filter((r) => vars.some((x) => x.r === r)).map((r) => ({
