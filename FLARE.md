@@ -17,6 +17,8 @@ npm test           # server API + recovery tests
 npm run build      # client build + server typecheck
 ```
 
+Optional: set `ANTHROPIC_API_KEY` before starting the server to enable the AI trade-off explanation (`POST /api/recovery/explain`). Without it that one endpoint returns 503 and everything else works.
+
 ## Who owns what
 
 | Slot | Paths |
