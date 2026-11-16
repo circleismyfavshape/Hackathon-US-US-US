@@ -3,11 +3,11 @@ import type {
   Alert,
   ApiError,
   LiveEvent,
-  Scenario,
   Sos,
   SosCreate,
   SosPatch,
 } from '../../../contracts/types.ts';
+import { parseScenario } from './scenario.ts';
 
 export type * from '../../../contracts/types.ts';
 export { ZONE_LEVELS } from '../../../contracts/types.ts';
@@ -49,7 +49,7 @@ async function request<T>(path: string, init?: { method?: string; body?: unknown
 
 export const api = {
   health: () => request<{ status: 'ok'; mode: 'demo' }>('/api/health'),
-  scenario: () => request<Scenario>('/api/scenario'),
+  scenario: () => request<unknown>('/api/scenario').then(parseScenario),
   alerts: () => request<Alert[]>('/api/alerts'),
   createSos: (body: SosCreate) => request<Sos>('/api/sos', { method: 'POST', body }),
   listSos: () => request<Sos[]>('/api/sos'),
