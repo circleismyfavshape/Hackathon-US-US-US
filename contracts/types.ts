@@ -1,5 +1,5 @@
 // Shared API types, v2.1. Client and server import this file to keep their data shapes aligned.
-// See contracts/API_CONTRACT.md. Change this file and that document together, and post on the board.
+// Keep this file and contracts/API_CONTRACT.md aligned when the data shapes change.
 
 export type LatLng = { lat: number; lng: number };
 

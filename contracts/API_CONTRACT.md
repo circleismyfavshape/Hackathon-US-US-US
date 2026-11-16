@@ -1,6 +1,6 @@
 # FLARE API contract, v2.1
 
-Changes are one versioned commit to this file and [`types.ts`](types.ts) together, plus a board post.
+Version contract changes together with [`types.ts`](types.ts).
 
 - **Types (source of truth):** [`contracts/types.ts`](types.ts). Client code imports them through `client/src/shared/api.ts`, which also holds the typed client.
 - **Scenario data (source of truth):** [`contracts/demo-fixtures.json`](demo-fixtures.json). The server loads it at startup and on reset.
