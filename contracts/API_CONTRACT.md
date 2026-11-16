@@ -10,17 +10,17 @@ Changes are one versioned commit to this file and [`types.ts`](types.ts) togethe
 
 ## Endpoints
 
-| Method | Path | Request | 2xx response |
-|---|---|---|---|
-| GET | `/api/health` | | `{ status:"ok", mode:"demo" }` |
-| GET | `/api/scenario` | | `Scenario`: `incidents`, `shelters` (safe zones), `demoLocations`, `routes`, `actions`, `contacts`, `defaultLocationId`, `demoBounds`, `demoTeams` |
-| GET | `/api/alerts` | | `Alert[]`: official warnings first, then simulated updates, newest first within each |
-| GET | `/api/events` | | Server-sent events (see below) |
-| POST | `/api/sos` | `SosCreate` | **201** `Sos` with generated `id` (`SOS-XXXXXXXX`), `status:"pending"`, `assignedTeam:null` |
-| GET | `/api/sos` | | `Sos[]`, oldest first. **Demo responder only. Never public in a real system.** |
-| GET | `/api/sos/:id` | | `Sos` |
-| PATCH | `/api/sos/:id` | `{status:"assigned",assignedTeam}` \| `{status:"resolved"}` \| `{status:"pending"}` | `Sos`. `resolved` keeps `assignedTeam`; `pending` clears it |
-| POST | `/api/demo/reset` | | `{ status:"reset", mode:"demo" }`. Reloads the scenario and clears all requests |
+| Method | Path              | Request                                                                             | 2xx response                                                                                                                                       |
+| ------ | ----------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health`     |                                                                                     | `{ status:"ok", mode:"demo" }`                                                                                                                     |
+| GET    | `/api/scenario`   |                                                                                     | `Scenario`: `incidents`, `shelters` (safe zones), `demoLocations`, `routes`, `actions`, `contacts`, `defaultLocationId`, `demoBounds`, `demoTeams` |
+| GET    | `/api/alerts`     |                                                                                     | `Alert[]`: official warnings first, then simulated updates, newest first within each                                                               |
+| GET    | `/api/events`     |                                                                                     | Server-sent events (see below)                                                                                                                     |
+| POST   | `/api/sos`        | `SosCreate`                                                                         | **201** `Sos` with generated `id` (`SOS-XXXXXXXX`), `status:"pending"`, `assignedTeam:null`                                                        |
+| GET    | `/api/sos`        |                                                                                     | `Sos[]`, oldest first. **Demo responder only. Never public in a real system.**                                                                     |
+| GET    | `/api/sos/:id`    |                                                                                     | `Sos`                                                                                                                                              |
+| PATCH  | `/api/sos/:id`    | `{status:"assigned",assignedTeam}` \| `{status:"resolved"}` \| `{status:"pending"}` | `Sos`. `resolved` keeps `assignedTeam`; `pending` clears it                                                                                        |
+| POST   | `/api/demo/reset` |                                                                                     | `{ status:"reset", mode:"demo" }`. Reloads the scenario and clears all requests                                                                    |
 
 `GET /api/incidents`, `GET /api/shelters` and `GET /api/demo/config` still answer with the matching parts of the scenario.
 
@@ -28,13 +28,13 @@ Changes are one versioned commit to this file and [`types.ts`](types.ts) togethe
 
 `GET /api/events` is a `text/event-stream`. Clients open one stream per page and refetch when told to.
 
-| Event | Data | Meaning |
-|---|---|---|
-| `ready` | `{}` | The stream is open. Sent on every connect, so a client that reconnects should refetch everything. |
-| `change` | `{ "type": "sos" }` | A request was created or updated. Refetch `/api/sos` or `/api/sos/:id`. |
+| Event    | Data                   | Meaning                                                                                                              |
+| -------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ready`  | `{}`                   | The stream is open. Sent on every connect, so a client that reconnects should refetch everything.                    |
+| `change` | `{ "type": "sos" }`    | A request was created or updated. Refetch `/api/sos` or `/api/sos/:id`.                                              |
 | `change` | `{ "type": "alerts" }` | The feed changed: a simulated update was released, or an official warning arrived or expired. Refetch `/api/alerts`. |
-| `change` | `{ "type": "reset" }` | The demo was reset. Refetch everything, including `/api/scenario`. |
-| `ping` | `{}` | Sent every 20 s of silence to keep the stream open. |
+| `change` | `{ "type": "reset" }`  | The demo was reset. Refetch everything, including `/api/scenario`.                                                   |
+| `ping`   | `{}`                   | Sent every 20 s of silence to keep the stream open.                                                                  |
 
 If the stream cannot be opened, clients fall back to polling every 3 s.
 

@@ -10,8 +10,8 @@
 
 > **Hackathon demonstration.** The floods, zones, safe zones, teams and requests are simulated. The weather warnings are real (MET Malaysia). Nothing sent here reaches an emergency service. In a real emergency call 999.
 
-| The alert | The emergency guide | The 3D map and route |
-|---|---|---|
+| The alert                                             | The emergency guide                                                            | The 3D map and route                                                             |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | ![Lock screen alert](docs/screenshots/01-landing.png) | ![Emergency guide on the phone](docs/screenshots/02-phone-emergency-guide.png) | ![3D map with the route to a safe zone](docs/screenshots/03-phone-map-route.png) |
 
 ---
@@ -35,12 +35,12 @@ Outside a flood zone the same screen is calm: where the nearest flood is, and wh
 
 **The map is 3D.** Real buildings stand up from the street map. Each flood zone is a block of water whose colour and height show its damage level. Safe zones are green pins, and the walking route follows real roads. The scenario includes **Bandar Sunway, around Sunway University and Monash University**, plus Shah Alam, Subang Jaya and Klang.
 
-**News you can read.** Official weather warnings from MET Malaysia arrive live and are labelled *Official*. Scenario updates are labelled *Simulated*. They are never mixed in one list.
+**News you can read.** Official weather warnings from MET Malaysia arrive live and are labelled _Official_. Scenario updates are labelled _Simulated_. They are never mixed in one list.
 
 **Responders see every request at once.** A request appears in the first responder console, in the queue and on the map, in well under a second. Sending a team or resolving it updates the citizen's phone just as fast.
 
-| News | Request sent, team on the way | First responder console |
-|---|---|---|
+| News                                                     | Request sent, team on the way                                     | First responder console                                         |
+| -------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------- |
 | ![News and warnings](docs/screenshots/04-phone-news.png) | ![Team on the way](docs/screenshots/07-phone-team-on-the-way.png) | ![Responder console](docs/screenshots/06-responder-console.png) |
 
 ## Try it
@@ -57,42 +57,44 @@ npm start
 
 Then open <http://localhost:8787> and tap the alert on the phone.
 
-| Command | What it does |
-|---|---|
-| `npm start` | Build the client, then serve the app and API on `:8787` |
-| `npm run dev` | Live reload: client on `:5173`, API on `:8787` |
-| `npm test` | Server tests: API, live events, geometry, scenario integrity, MET feed |
-| `npm run build` | Client build and server typecheck |
-| `npm run typecheck` | Typecheck both workspaces |
-| `node tools/e2e.mjs` | The whole story in a real browser; retakes `docs/screenshots` (see the file header) |
+| Command                | What it does                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `npm start`            | Build the client, then serve the app and API on `:8787`                             |
+| `npm run dev`          | Live reload: client on `:5173`, API on `:8787`                                      |
+| `npm test`             | Server tests: API, live events, geometry, scenario integrity, MET feed              |
+| `npm run build`        | Client build and server typecheck                                                   |
+| `npm run typecheck`    | Typecheck both workspaces                                                           |
+| `npm run format`       | Format the source, styles, configuration and current docs                           |
+| `npm run format:check` | Check formatting without changing files                                             |
+| `node tools/e2e.mjs`   | The whole story in a real browser; retakes `docs/screenshots` (see the file header) |
 
 ### Finding your way around the demo
 
-The product is the phone app. Everything a tester needs that is *not* part of the product sits in the bar above it:
+The product is the phone app. Everything a tester needs that is _not_ part of the product sits in the bar above it:
 
-| Control | What it does |
-|---|---|
-| **View as** Citizen / First responder | Switch between the two sides of the same incident. |
-| **On** Phone / Desktop | Show the current view in a phone frame or on the full screen. |
-| **Citizen is at** | Move the simulated citizen. Put them inside a zone and the app raises the alert; move them out and it goes calm. The target button uses the demo place nearest your real location (your position never leaves the browser). |
-| **Reset** | Clear every request and restart the scenario. |
+| Control                               | What it does                                                                                                                                                                                                                |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **View as** Citizen / First responder | Switch between the two sides of the same incident.                                                                                                                                                                          |
+| **On** Phone / Desktop                | Show the current view in a phone frame or on the full screen.                                                                                                                                                               |
+| **Citizen is at**                     | Move the simulated citizen. Put them inside a zone and the app raises the alert; move them out and it goes calm. The target button uses the demo place nearest your real location (your position never leaves the browser). |
+| **Reset**                             | Clear every request and restart the scenario.                                                                                                                                                                               |
 
 A good two-minute run: open `/`, tap the alert, read the guide, open the map, send a request from **Get help**. Open a second tab on **First responder**, send a team, and watch the phone change. The step-by-step script is in [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md).
 
 ### Routes
 
-| Path | View |
-|---|---|
-| `/` | The lock-screen alert |
-| `/phone/citizen` | The citizen app in a phone frame (where the alert leads) |
-| `/citizen` | The citizen app on a wide screen, beside the map |
-| `/phone/responder`, `/responder` | The first responder console |
+| Path                             | View                                                     |
+| -------------------------------- | -------------------------------------------------------- |
+| `/`                              | The lock-screen alert                                    |
+| `/phone/citizen`                 | The citizen app in a phone frame (where the alert leads) |
+| `/citizen`                       | The citizen app on a wide screen, beside the map         |
+| `/phone/responder`, `/responder` | The first responder console                              |
 
 ### Environment variables
 
-| Variable | Effect |
-|---|---|
-| `PORT` | Port for the server. Default `8787`. |
+| Variable              | Effect                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                | Port for the server. Default `8787`.                                                                                                                                      |
 | `FLARE_LIVE_ALERTS=0` | Turn off the official MET Malaysia warnings. They are on by default, need no key, and need internet. If the feed cannot be reached the news simply has no official items. |
 
 The map needs internet for street tiles and buildings (OpenFreeMap). Offline it falls back to a blank canvas that still shows zones, pins and routes.
@@ -117,11 +119,11 @@ flowchart LR
 
 ### Tech stack
 
-| Layer | Tools |
-|---|---|
+| Layer  | Tools                                                                                                                                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Client | React 19, TypeScript, Vite 6, MapLibre GL through the mapcn map component, OpenFreeMap vector tiles, Tailwind CSS 4 (map component only), Lucide icons, Geist |
-| Server | Node, Hono, server-sent events, tsx |
-| Tests | Node's built-in test runner; Playwright for the browser run |
+| Server | Node, Hono, server-sent events, tsx                                                                                                                           |
+| Tests  | Node's built-in test runner; Playwright for the browser run                                                                                                   |
 
 ## Project structure
 
@@ -167,11 +169,9 @@ The floods, zones, safe zones and teams are fictional; place names and roads are
 
 ## Team
 
-| | GitHub | Role |
-|---|---|---|
-| Khaled | [@jeffyoh312](https://github.com/jeffyoh312) | Team lead, responder workflows, QA |
-| Sajid | [@69sxjid](https://github.com/69sxjid) | Backend, integration |
-| Awais | [@Vais1](https://github.com/Vais1) | Citizen experience, map and geometry, live data |
-| Ahmed | [@circleismyfavshape](https://github.com/circleismyfavshape) | Allocation engine (retired with the Recovery feature), logo |
-
-Built with coding agents working in parallel. They coordinate through a pinned GitHub issue using `tools/board`; the rules are in [AGENTS.md](AGENTS.md).
+|        | GitHub                                                       | Role                                                                      |
+| ------ | ------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Khaled | [@jeffyoh312](https://github.com/jeffyoh312)                 | Team lead, product direction, app redesign, responder console and testing |
+| Sajid  | [@69sxjid](https://github.com/69sxjid)                       | Backend, API contracts, integration and shared UI                         |
+| Awais  | [@Vais1](https://github.com/Vais1)                           | Citizen experience, maps, location checks and live weather data           |
+| Ahmed  | [@circleismyfavshape](https://github.com/circleismyfavshape) | Logo, branding and the original recovery allocation engine                |

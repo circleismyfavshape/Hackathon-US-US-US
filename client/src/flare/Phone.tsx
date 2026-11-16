@@ -15,7 +15,17 @@ const STATUS = 46;
 export function usePhoneScale(reserve: number) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
-    const fit = () => setScale(Math.max(0.45, Math.min(1, (window.innerHeight - reserve) / (PHONE_H + 24), (window.innerWidth - 48) / (PHONE_W + 24))));
+    const fit = () =>
+      setScale(
+        Math.max(
+          0.45,
+          Math.min(
+            1,
+            (window.innerHeight - reserve) / (PHONE_H + 24),
+            (window.innerWidth - 48) / (PHONE_W + 24),
+          ),
+        ),
+      );
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
@@ -25,11 +35,22 @@ export function usePhoneScale(reserve: number) {
 
 /** The phone at a given scale. A transform (not CSS zoom) keeps clicks and the iframe's own layout exact;
  *  the outer box takes the scaled size so the page lays out around what is actually drawn. */
-export function PhoneBody({ scale, className, children }: { scale: number; className?: string; children: ReactNode }) {
+export function PhoneBody({
+  scale,
+  className,
+  children,
+}: {
+  scale: number;
+  className?: string;
+  children: ReactNode;
+}) {
   const w = PHONE_W + 24;
   const h = PHONE_H + 24;
   return (
-    <div className={`fl-phone-fit${className ? ` ${className}` : ''}`} style={{ width: w * scale, height: h * scale }}>
+    <div
+      className={`fl-phone-fit${className ? ` ${className}` : ''}`}
+      style={{ width: w * scale, height: h * scale }}
+    >
       <div className="fl-phone" style={{ transform: `scale(${scale})` }}>
         {children}
       </div>
@@ -70,18 +91,36 @@ export default function Phone({ role }: { role: Role }) {
   }, []);
 
   // On a real phone (or already inside the frame) there is nothing to frame: show the page itself.
-  if (small || EMBEDDED) return role === 'citizen' ? <Citizen device="phone" /> : <Responder device="phone" />;
+  if (small || EMBEDDED) {
+    return role === 'citizen' ? <Citizen device="phone" /> : <Responder device="phone" />;
+  }
 
   return (
-    <Viewer role={role} device="phone" scenario={scenario} location={location} onLocation={setLocation}>
+    <Viewer
+      role={role}
+      device="phone"
+      scenario={scenario}
+      location={location}
+      onLocation={setLocation}
+    >
       <div className="fl-stage">
         <PhoneBody scale={scale}>
           <div className="fl-phone-screen" style={{ width: PHONE_W, height: PHONE_H }}>
             <div className="fl-phone-status">
               <span>{clock}</span>
-              <span>5G <i /></span>
+              <span>
+                5G <i />
+              </span>
             </div>
-            <iframe key={role} title={`FLARE ${role} app on a phone`} src={`/${role}`} width={PHONE_W} height={PHONE_H - STATUS} style={{ marginTop: STATUS }} allow="geolocation" />
+            <iframe
+              key={role}
+              title={`FLARE ${role} app on a phone`}
+              src={`/${role}`}
+              width={PHONE_W}
+              height={PHONE_H - STATUS}
+              style={{ marginTop: STATUS }}
+              allow="geolocation"
+            />
             <div className="fl-phone-home" />
           </div>
         </PhoneBody>
