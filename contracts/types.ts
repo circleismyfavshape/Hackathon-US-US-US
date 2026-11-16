@@ -57,7 +57,14 @@ export type DemoLocation = { id: string; incidentId: string; label: string; loca
 
 /** A walking route on the road network from a demo location to a safe zone. [lng, lat] points.
  *  It follows real roads but does not know which of them are flooded. */
-export type Route = { id: string; fromLocationId: string; shelterId: string; distanceM: number; minutes: number; coordinates: [number, number][] };
+export type Route = {
+  id: string;
+  fromLocationId: string;
+  shelterId: string;
+  distanceM: number;
+  minutes: number;
+  coordinates: [number, number][];
+};
 
 export type Contact = { id: string; label: string; number: string; note: string };
 
@@ -108,9 +115,7 @@ export type Sos = SosCreate & {
 };
 
 export type SosPatch =
-  | { status: 'assigned'; assignedTeam: string }
-  | { status: 'resolved' }
-  | { status: 'pending' };
+  { status: 'assigned'; assignedTeam: string } | { status: 'resolved' } | { status: 'pending' };
 
 /** One item in the news feed. `sourceType` says whether it is a real official warning or part of the simulated scenario. */
 export type Alert = {

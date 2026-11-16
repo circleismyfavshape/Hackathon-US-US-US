@@ -12,7 +12,9 @@ import { resolve } from 'node:path';
 
 const base = process.env.FLARE_TEST_URL ?? 'http://localhost:8793';
 const shots = resolve('docs/screenshots');
-const requireBrowser = createRequire(resolve(process.env.FLARE_BROWSER_TOOLS ?? '.board/browser-tools', 'package.json'));
+const requireBrowser = createRequire(
+  resolve(process.env.FLARE_BROWSER_TOOLS ?? '.board/browser-tools', 'package.json'),
+);
 const { chromium } = requireBrowser('playwright');
 
 const steps = [];
@@ -33,7 +35,9 @@ const errors = [];
 const watch = (page, label) => {
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
   page.on('console', (m) => {
-    if (m.type() === 'error' && !/favicon|tiles\.openfreemap|net::ERR/.test(m.text())) errors.push(`${label}: ${m.text()}`);
+    if (m.type() === 'error' && !/favicon|tiles\.openfreemap|net::ERR/.test(m.text())) {
+      errors.push(`${label}: ${m.text()}`);
+    }
   });
 };
 
@@ -112,13 +116,27 @@ try {
     assert.match(await item.innerText(), /Monash University/);
   });
 
-  await step('a second request reaches the open console in under a second, with a notification', async () => {
-    const t = Date.now();
-    await fetch(`${base}/api/sos`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ incidentId: 'INC-DEMO-004', people: 2, type: 'medical-help', description: 'Elderly man needs his medicine', location: { lat: 3.0624, lng: 101.6058 }, locationMode: 'manual-demo' }) });
-    await ops.getByTestId('queue-item').nth(1).waitFor({ timeout: 1000 });
-    assert.ok(Date.now() - t < 1000);
-    assert.match(await ops.locator('.fl-toast').first().innerText(), /New request · Medical/);
-  });
+  await step(
+    'a second request reaches the open console in under a second, with a notification',
+    async () => {
+      const t = Date.now();
+      await fetch(`${base}/api/sos`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          incidentId: 'INC-DEMO-004',
+          people: 2,
+          type: 'medical-help',
+          description: 'Elderly man needs his medicine',
+          location: { lat: 3.0624, lng: 101.6058 },
+          locationMode: 'manual-demo',
+        }),
+      });
+      await ops.getByTestId('queue-item').nth(1).waitFor({ timeout: 1000 });
+      assert.ok(Date.now() - t < 1000);
+      assert.match(await ops.locator('.fl-toast').first().innerText(), /New request · Medical/);
+    },
+  );
 
   await step('sending a team updates the citizen within a second', async () => {
     await ops.getByTestId('queue-item').filter({ hasText: sosId }).click();
@@ -126,7 +144,9 @@ try {
     await settle(ops, 7000);
     await ops.screenshot({ path: `${shots}/06-responder-console.png` });
     await ops.getByTestId('assign').click();
-    await app.locator('[data-testid="sos-headline"]', { hasText: 'Team on the way' }).waitFor({ timeout: 1000 });
+    await app
+      .locator('[data-testid="sos-headline"]', { hasText: 'Team on the way' })
+      .waitFor({ timeout: 1000 });
     assert.match(await app.locator('.fl-toast').first().innerText(), /Help is on the way/);
     await settle(page, 600);
     await page.screenshot({ path: `${shots}/07-phone-team-on-the-way.png` });
@@ -134,21 +154,26 @@ try {
 
   await step('resolving it updates the citizen within a second', async () => {
     await ops.getByTestId('resolve').click();
-    await app.locator('[data-testid="sos-headline"]', { hasText: 'Resolved' }).waitFor({ timeout: 1000 });
+    await app
+      .locator('[data-testid="sos-headline"]', { hasText: 'Resolved' })
+      .waitFor({ timeout: 1000 });
   });
 
-  await step('moving the citizen out of the zone changes the app to its calm state, and back in raises the alert', async () => {
-    await page.locator('#fl-loc').selectOption('L10');
-    await app.locator('.fl-hero[data-tone="safe"]').waitFor();
-    assert.match(await app.locator('.fl-hero h1').innerText(), /outside the marked flood zones/);
-    await settle(page, 800);
-    await page.screenshot({ path: `${shots}/08-phone-outside-zones.png` });
-    await page.locator('#fl-loc').selectOption('L9');
-    await app.locator('.fl-hero[data-tone="high"]').waitFor();
-    assert.match(await app.locator('.fl-toast').first().innerText(), /EMERGENCY FLOOD/);
-    await page.locator('#fl-loc').selectOption('L7');
-    await app.locator('.fl-hero[data-tone="severe"]').waitFor();
-  });
+  await step(
+    'moving the citizen out of the zone changes the app to its calm state, and back in raises the alert',
+    async () => {
+      await page.locator('#fl-loc').selectOption('L10');
+      await app.locator('.fl-hero[data-tone="safe"]').waitFor();
+      assert.match(await app.locator('.fl-hero h1').innerText(), /outside the marked flood zones/);
+      await settle(page, 800);
+      await page.screenshot({ path: `${shots}/08-phone-outside-zones.png` });
+      await page.locator('#fl-loc').selectOption('L9');
+      await app.locator('.fl-hero[data-tone="high"]').waitFor();
+      assert.match(await app.locator('.fl-toast').first().innerText(), /EMERGENCY FLOOD/);
+      await page.locator('#fl-loc').selectOption('L7');
+      await app.locator('.fl-hero[data-tone="severe"]').waitFor();
+    },
+  );
 
   await step('the citizen app on a wide screen sits beside the map', async () => {
     await page.locator('.fl-bar .fl-seg a', { hasText: 'Desktop' }).click();
@@ -160,12 +185,25 @@ try {
   });
 
   await step('switching role and device forty times never breaks a view', async () => {
-    const order = ['Phone', 'First responder', 'Desktop', 'Citizen', 'Phone', 'Desktop', 'First responder', 'Citizen'];
+    const order = [
+      'Phone',
+      'First responder',
+      'Desktop',
+      'Citizen',
+      'Phone',
+      'Desktop',
+      'First responder',
+      'Citizen',
+    ];
     for (let i = 0; i < 5; i++) {
       for (const label of order) {
         await page.locator('.fl-bar .fl-seg a', { hasText: label }).click();
         await page.waitForTimeout(i % 2 ? 60 : 350);
-        assert.equal(await page.locator('.fl-state[role="alert"]').count(), 0, `crash screen after ${label}`);
+        assert.equal(
+          await page.locator('.fl-state[role="alert"]').count(),
+          0,
+          `crash screen after ${label}`,
+        );
       }
     }
     await page.locator('.fl-desk .fl-hero').waitFor();
@@ -173,12 +211,21 @@ try {
   });
 
   await step('the responder console works at phone width', async () => {
-    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const phone = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
     const p = await phone.newPage();
     watch(p, 'responder-phone');
     await p.goto(`${base}/responder`);
     await p.getByTestId('queue-item').first().waitFor();
-    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0);
+    assert.equal(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+      0,
+    );
     await p.getByTestId('queue-item').first().click();
     await p.getByTestId('detail-id').waitFor();
     await p.locator('.fl-detail-back').click();
@@ -188,7 +235,11 @@ try {
   });
 
   await step('the citizen app fits a real phone with no sideways scrolling', async () => {
-    const phone = await browser.newContext({ viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true });
+    const phone = await browser.newContext({
+      viewport: { width: 375, height: 740 },
+      isMobile: true,
+      hasTouch: true,
+    });
     const p = await phone.newPage();
     watch(p, 'citizen-phone');
     await p.goto(`${base}/phone/citizen`);
@@ -196,7 +247,13 @@ try {
     for (const tab of ['Map', 'News', 'Get help']) {
       await p.locator('.fl-tabbar button', { hasText: tab }).click();
       await p.waitForTimeout(300);
-      assert.equal(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${tab} overflows`);
+      assert.equal(
+        await p.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+        0,
+        `${tab} overflows`,
+      );
     }
     await phone.close();
   });

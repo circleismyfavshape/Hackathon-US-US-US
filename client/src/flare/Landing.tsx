@@ -16,7 +16,12 @@ export default function Landing() {
   const scale = usePhoneScale(56 + 56);
   const clock = useClock();
   const [opening, setOpening] = useState(false);
-  const date = new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
+  const date = new Date().toLocaleDateString('en-MY', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: TZ,
+  });
 
   // The story always starts from the scenario's default place, which is inside a danger zone.
   const start = useMemo(() => {
@@ -36,9 +41,13 @@ export default function Landing() {
     : 'Flooding reported at your location. Open for what to do and the way to a safe zone.';
 
   const open = () => {
-    if (opening) return;
+    if (opening) {
+      return;
+    }
     setOpening(true);
-    if (start) setLocation(start.location.id);
+    if (start) {
+      setLocation(start.location.id);
+    }
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(
       () => {
@@ -52,34 +61,58 @@ export default function Landing() {
   return (
     <div className="fl-app fl-landing">
       <header className="fl-bar fl-bar-plain">
-        <span className="fl-brand"><FlareLogo height={22} /></span>
+        <span className="fl-brand">
+          <FlareLogo height={22} />
+        </span>
         <div className="fl-bar-end">
-          <span className="fl-simpill" role="note">Simulation</span>
+          <span className="fl-simpill" role="note">
+            Simulation
+          </span>
         </div>
       </header>
       <main className="fl-lockpage">
         <section className="fl-intro">
           <span className="fl-eyebrow">Flood alerts that know where you are</span>
-          <h1>When the water rises, FLARE tells you <em>what to do next.</em></h1>
+          <h1>
+            When the water rises, FLARE tells you <em>what to do next.</em>
+          </h1>
           <p>
-            FLARE watches your location. The moment you are inside a flood zone it alerts you, then shows only what matters: what to do now, who to call, and the way to the nearest safe zone.
+            FLARE watches your location. The moment you are inside a flood zone it alerts you, then
+            shows only what matters: what to do now, who to call, and the way to the nearest safe
+            zone.
           </p>
-          <p className="fl-lockhint">Tap the alert on the phone <ChevronRight size={15} aria-hidden /></p>
+          <p className="fl-lockhint">
+            Tap the alert on the phone <ChevronRight size={15} aria-hidden />
+          </p>
         </section>
 
         <PhoneBody scale={scale} className="fl-lockphone">
-          <div className="fl-phone-screen fl-lock" data-opening={opening || undefined} style={{ width: PHONE_W, height: PHONE_H }}>
+          <div
+            className="fl-phone-screen fl-lock"
+            data-opening={opening || undefined}
+            style={{ width: PHONE_W, height: PHONE_H }}
+          >
             <div className="fl-phone-status">
               <span>{clock}</span>
-              <span>5G <i /></span>
+              <span>
+                5G <i />
+              </span>
             </div>
             <div className="fl-lock-time">
               <span className="fl-lock-date">{date}</span>
               <span className="fl-lock-clock">{clock}</span>
             </div>
-            <button type="button" className="fl-lock-alert" onClick={open} data-testid="lock-alert" aria-label="Emergency flood alert. Open the FLARE app.">
+            <button
+              type="button"
+              className="fl-lock-alert"
+              onClick={open}
+              data-testid="lock-alert"
+              aria-label="Emergency flood alert. Open the FLARE app."
+            >
               <span className="fl-lock-alert-top">
-                <span className="fl-lock-alert-icon"><TriangleAlert size={17} aria-hidden /></span>
+                <span className="fl-lock-alert-icon">
+                  <TriangleAlert size={17} aria-hidden />
+                </span>
                 <span className="fl-lock-alert-app">FLARE · Emergency alert</span>
                 <i>now</i>
               </span>
