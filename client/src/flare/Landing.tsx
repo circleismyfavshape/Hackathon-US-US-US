@@ -11,7 +11,7 @@ import './theme.css';
 const TZ = 'Asia/Kuala_Lumpur';
 
 export default function Landing() {
-  const { scenario } = useScenario();
+  const { scenario, error, reload } = useScenario();
   const [, setLocation] = useDemoLocation(scenario);
   const scale = usePhoneScale(56 + 56);
   const clock = useClock();
@@ -38,7 +38,9 @@ export default function Landing() {
 
   const body = start?.danger
     ? `You are in a ${LEVEL_NAME[start.danger.level].toLowerCase()} flood zone at ${start.danger.incident.area}. Open for what to do and the way to a safe zone.`
-    : 'Flooding reported at your location. Open for what to do and the way to a safe zone.';
+    : error
+      ? 'The scenario could not be loaded. Try again using the button beside the phone.'
+      : 'Loading the scenario and checking the starting location…';
 
   const open = () => {
     if (opening) {
@@ -84,6 +86,14 @@ export default function Landing() {
           <p className="fl-lockhint">
             Tap the alert on the phone <ChevronRight size={15} aria-hidden />
           </p>
+          {error && (
+            <div className="fl-inline-warn" role="alert">
+              <p>{error}</p>
+              <button type="button" className="fl-btn" onClick={reload}>
+                Try again
+              </button>
+            </div>
+          )}
         </section>
 
         <PhoneBody scale={scale} className="fl-lockphone">
@@ -106,6 +116,7 @@ export default function Landing() {
               type="button"
               className="fl-lock-alert"
               onClick={open}
+              disabled={!start || opening}
               data-testid="lock-alert"
               aria-label="Emergency flood alert. Open the FLARE app."
             >
@@ -116,7 +127,9 @@ export default function Landing() {
                 <span className="fl-lock-alert-app">FLARE · Emergency alert</span>
                 <i>now</i>
               </span>
-              <strong>EMERGENCY FLOOD</strong>
+              <strong>
+                {start ? 'EMERGENCY FLOOD' : error ? 'Alert unavailable' : 'Loading alert…'}
+              </strong>
               <span className="fl-lock-alert-body">{body}</span>
               <span className="fl-lock-alert-meta">Simulation · Tap to open</span>
             </button>

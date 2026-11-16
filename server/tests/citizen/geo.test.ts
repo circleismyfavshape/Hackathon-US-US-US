@@ -42,6 +42,65 @@ describe('danger check against the Sunway–Monash scenario', () => {
 });
 
 describe('scenario integrity', () => {
+  test('every area has severe, high, moderate and outside-zone example locations', () => {
+    for (const area of fx.incidents) {
+      assert.deepEqual(
+        new Set(area.zones.map((zone) => zone.level)),
+        new Set(['severe', 'high', 'moderate']),
+        area.id,
+      );
+      assert.ok(
+        area.zones.every((zone) => zone.coordinates.length >= 8 || area.id === 'INC-DEMO-004'),
+        area.id,
+      );
+      const levels = new Set(
+        fx.demoLocations
+          .filter((place) => place.incidentId === area.id)
+          .map((place) => zoneAt(place.location, area.zones)),
+      );
+      assert.deepEqual(levels, new Set(['severe', 'high', 'moderate', 'none']), area.area);
+    }
+  });
+
+  test('every area has relief, medical care, response posts and road closures', () => {
+    for (const area of fx.incidents) {
+      const shelters = fx.shelters.filter((shelter) => shelter.incidentId === area.id);
+      assert.ok(shelters.filter((shelter) => shelter.kind === 'relief').length >= 2, area.area);
+      assert.ok(
+        shelters.some((shelter) => shelter.kind === 'medical'),
+        area.area,
+      );
+      const kinds = new Set(
+        fx.mapPoints.filter((point) => point.incidentId === area.id).map((point) => point.kind),
+      );
+      assert.deepEqual(kinds, new Set(['police', 'fire', 'roadblock', 'aid']), area.area);
+      assert.ok(
+        fx.roadClosures.filter((closure) => closure.incidentId === area.id).length >= 2,
+        area.area,
+      );
+      assert.ok(fx.alerts.filter((alert) => alert.incidentId === area.id).length >= 5, area.area);
+    }
+  });
+
+  test('operational points and closure lines stay in bounds and are marked simulated', () => {
+    const incidents = new Set(fx.incidents.map((area) => area.id));
+    for (const item of [...fx.mapPoints, ...fx.roadClosures]) {
+      assert.ok(incidents.has(item.incidentId), item.id);
+      assert.equal(item.sourceType, 'simulation', item.id);
+      const points =
+        'coordinates' in item ? item.coordinates : [[item.location.lng, item.location.lat]];
+      assert.ok(points.length >= ('coordinates' in item ? 2 : 1), item.id);
+      for (const [lng, lat] of points) {
+        assert.ok(
+          lng > fx.demoBounds.minLng &&
+            lng < fx.demoBounds.maxLng &&
+            lat > fx.demoBounds.minLat &&
+            lat < fx.demoBounds.maxLat,
+          item.id,
+        );
+      }
+    }
+  });
   test('the default location exists and is in danger, so the lock-screen alert is true', () => {
     const d = dangerAt(loc(fx.defaultLocationId).location, fx.incidents);
     assert.ok(d, 'default location must be inside a marked zone');
@@ -137,6 +196,18 @@ describe('pointInRing', () => {
     assert.equal(pointInRing({ lat: 1, lng: 1 }, square), true);
     assert.equal(pointInRing({ lat: 1, lng: 3 }, square), false);
     assert.equal(pointInRing({ lat: 3, lng: 1 }, square), false);
+  });
+  test('includes edges and vertices instead of treating a boundary point as outside', () => {
+    for (const point of [
+      { lat: 0, lng: 1 },
+      { lat: 2, lng: 1 },
+      { lat: 1, lng: 0 },
+      { lat: 1, lng: 2 },
+      { lat: 0, lng: 0 },
+    ]) {
+      assert.equal(pointInRing(point, square), true, JSON.stringify(point));
+    }
+    assert.equal(pointInRing({ lat: 2.001, lng: 1 }, square), false);
   });
   test('concave ring excludes the notch', () => {
     const u: Ring = [

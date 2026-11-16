@@ -1,7 +1,7 @@
 // Shared pieces: the viewer bar that sits OUTSIDE the product (role, device and simulated-location switches for
 // whoever is testing), notifications, small tags, and a crash screen.
 import '@fontsource-variable/geist';
-import { Component, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { LocateFixed, Monitor, RotateCcw, Smartphone } from 'lucide-react';
 import { nearest } from '../features/citizen/geo.ts';
 import {
@@ -323,14 +323,29 @@ export type Toast = {
 
 export function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const dismiss = useCallback(
-    (id: string) => setToasts((cur) => cur.filter((x) => x.id !== id)),
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(
+    () => () => {
+      for (const timer of timers.current.values()) {
+        clearTimeout(timer);
+      }
+      timers.current.clear();
+    },
     [],
   );
+  const dismiss = useCallback((id: string) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
   const push = useCallback(
     (t: Toast) => {
       setToasts((cur) => (cur.some((x) => x.id === t.id) ? cur : [t, ...cur].slice(0, 3)));
-      setTimeout(() => dismiss(t.id), 8000);
+      clearTimeout(timers.current.get(t.id));
+      timers.current.set(
+        t.id,
+        setTimeout(() => dismiss(t.id), 8000),
+      );
     },
     [dismiss],
   );

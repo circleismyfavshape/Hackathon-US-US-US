@@ -1,4 +1,4 @@
-// FLARE shared contract types, v2.0. Imported with `import type` by both client and server.
+// Shared API types, v2.1. Client and server import this file to keep their data shapes aligned.
 // See contracts/API_CONTRACT.md. Change this file and that document together, and post on the board.
 
 export type LatLng = { lat: number; lng: number };
@@ -68,6 +68,27 @@ export type Route = {
 
 export type Contact = { id: string; label: string; number: string; note: string };
 
+/** Illustrated operations, not live agency locations or confirmed service availability. */
+export type MapPoint = {
+  id: string;
+  incidentId: string;
+  kind: 'police' | 'fire' | 'roadblock' | 'aid';
+  name: string;
+  note: string;
+  location: LatLng;
+  sourceType: 'simulation';
+};
+
+/** A closed road segment in the scenario. Routes are not recalculated around these lines. */
+export type RoadClosure = {
+  id: string;
+  incidentId: string;
+  name: string;
+  reason: string;
+  coordinates: [number, number][];
+  sourceType: 'simulation';
+};
+
 /** What to do, by the level of the zone the person is in. */
 export type Actions = Record<ZoneLevel, string[]>;
 
@@ -76,6 +97,8 @@ export type Scenario = {
   shelters: Shelter[];
   demoLocations: DemoLocation[];
   routes: Route[];
+  mapPoints: MapPoint[];
+  roadClosures: RoadClosure[];
   actions: Actions;
   contacts: Contact[];
   defaultLocationId: string;
