@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
-import type { Sos } from '../../../contracts/types.ts';
-import { createApp } from '../../src/app.ts';
+import type { Alert, Scenario, Sos } from '../../../contracts/types.ts';
+import { createApp, watchFeed } from '../../src/app.ts';
+import { DemoStore } from '../../src/store/store.ts';
 
 let app: ReturnType<typeof createApp>;
+let store: DemoStore;
 beforeEach(() => {
-  app = createApp();
+  store = new DemoStore();
+  app = createApp(store);
 });
 
 const json = (method: string, body: unknown) => ({
@@ -15,11 +18,11 @@ const json = (method: string, body: unknown) => ({
 });
 
 const validSos = {
-  incidentId: 'INC-DEMO-001',
+  incidentId: 'INC-DEMO-004',
   people: 3,
   type: 'trapped',
   description: 'Three people waiting upstairs (demo)',
-  location: { lat: 3.073, lng: 101.52 },
+  location: { lat: 3.0639, lng: 101.6008 },
   locationMode: 'manual-demo',
 };
 
@@ -30,19 +33,66 @@ describe('health + read-only data', () => {
     assert.deepEqual(await r.json(), { status: 'ok', mode: 'demo' });
   });
 
-  test('incidents and shelters are labelled simulation', async () => {
-    const inc = (await (await app.request('/api/incidents')).json()) as any[];
-    assert.equal(inc.length, 3);
-    assert.equal(inc[0].sourceType, 'simulation');
-    assert.ok(inc[0].zones.length >= 1);
-    const sh = (await (await app.request('/api/shelters')).json()) as any[];
-    assert.ok(sh.length >= 1 && sh.every((s) => s.sourceType === 'simulation'));
+  test('GET /api/scenario returns the whole scenario, labelled simulation, without the alert seed', async () => {
+    const s = (await (await app.request('/api/scenario')).json()) as Scenario & { alerts?: unknown };
+    assert.equal(s.incidents.length, 4);
+    assert.equal(s.incidents[0].area, 'Sunway–Monash');
+    assert.ok(s.incidents.every((i) => i.sourceType === 'simulation' && i.zones.length >= 1 && !Number.isNaN(Date.parse(i.updatedAt))));
+    assert.ok(s.shelters.every((x) => x.sourceType === 'simulation' && x.status === 'demo-listed'));
+    assert.ok(s.routes.length > 0 && s.contacts.length > 0 && s.demoTeams.length > 0);
+    assert.equal(s.alerts, undefined);
   });
 
-  test('GET /api/recovery returns 3 centres + inventory', async () => {
-    const r = (await (await app.request('/api/recovery')).json()) as any;
-    assert.equal(r.centres.length, 3);
-    assert.deepEqual(r.inventory, { water: 220, food: 200, hygiene: 90 });
+  test('incident times are recent, not a fixed date', async () => {
+    const s = (await (await app.request('/api/scenario')).json()) as Scenario;
+    for (const i of s.incidents) assert.ok(Date.now() - Date.parse(i.updatedAt) < 60 * 60_000);
+  });
+
+  test('older endpoints still answer', async () => {
+    assert.equal(((await (await app.request('/api/incidents')).json()) as unknown[]).length, 4);
+    assert.ok(((await (await app.request('/api/shelters')).json()) as unknown[]).length >= 4);
+    const cfg = (await (await app.request('/api/demo/config')).json()) as { demoLocations: unknown[] };
+    assert.ok(cfg.demoLocations.length >= 6);
+  });
+
+  test('the recovery feature is gone', async () => {
+    assert.equal((await app.request('/api/recovery')).status, 404);
+    assert.equal((await app.request('/api/recovery/compare', json('POST', { strategy: 'proportional' }))).status, 404);
+  });
+
+  test('unknown API path is a JSON 404', async () => {
+    const r = await app.request('/api/nope');
+    assert.equal(r.status, 404);
+    assert.deepEqual(await r.json(), { error: 'not found' });
+  });
+});
+
+describe('alerts feed', () => {
+  test('simulated updates are released over time, newest first, each tagged simulation', async () => {
+    const first = (await (await app.request('/api/alerts')).json()) as Alert[];
+    assert.ok(first.length >= 1 && first.length < store.fixtures.alerts.length);
+    assert.ok(first.every((a) => a.sourceType === 'simulation' && a.title && a.text && a.source));
+    store.startedAt = Date.now() - 10 * 60_000;
+    const later = (await (await app.request('/api/alerts')).json()) as Alert[];
+    assert.equal(later.length, store.fixtures.alerts.length);
+    assert.deepEqual([...later].sort((a, b) => b.at.localeCompare(a.at)), later);
+  });
+
+  test('official items come first and are tagged official', async () => {
+    const official: Alert = { id: 'MET-1', incidentId: null, kind: 'weather', title: 'Thunderstorms Warning', text: 't', source: 'MET Malaysia', sourceType: 'official', at: new Date().toISOString(), validTo: null, local: true, url: null };
+    const live = createApp(store, async () => [official]);
+    const out = (await (await live.request('/api/alerts')).json()) as Alert[];
+    assert.equal(out[0].id, 'MET-1');
+    assert.ok(out.slice(1).every((a) => a.sourceType === 'simulation'));
+  });
+
+  test('a failing official source leaves the simulated feed intact', async () => {
+    const live = createApp(store, async () => {
+      throw new Error('network down');
+    });
+    const r = await live.request('/api/alerts');
+    assert.equal(r.status, 200);
+    assert.ok(((await r.json()) as Alert[]).length >= 1);
   });
 });
 
@@ -73,6 +123,15 @@ describe('SOS lifecycle', () => {
     assert.equal(done.assignedTeam, 'Demo Rescue A');
   });
 
+  test('a request can be sent with no description at all', async () => {
+    const { description: _d, ...bare } = validSos;
+    for (const body of [bare, { ...validSos, description: '' }, { ...validSos, description: '   ' }]) {
+      const r = await app.request('/api/sos', json('POST', body));
+      assert.equal(r.status, 201);
+      assert.equal(((await r.json()) as Sos).description, '');
+    }
+  });
+
   test('ids are unique', async () => {
     const ids = new Set<string>();
     for (let i = 0; i < 20; i++) ids.add(((await (await app.request('/api/sos', json('POST', validSos))).json()) as Sos).id);
@@ -80,9 +139,16 @@ describe('SOS lifecycle', () => {
   });
 
   test('browser-opt-in coordinates are coarsened to 2 dp', async () => {
-    const r = await app.request('/api/sos', json('POST', { ...validSos, location: { lat: 3.07345, lng: 101.52178 }, locationMode: 'browser-opt-in' }));
+    const r = await app.request('/api/sos', json('POST', { ...validSos, location: { lat: 3.06391, lng: 101.60078 }, locationMode: 'browser-opt-in' }));
     const s = (await r.json()) as Sos;
-    assert.deepEqual(s.location, { lat: 3.07, lng: 101.52 });
+    assert.deepEqual(s.location, { lat: 3.06, lng: 101.6 });
+  });
+
+  test('every demo location is inside the demo bounds', async () => {
+    for (const l of store.fixtures.demoLocations) {
+      const r = await app.request('/api/sos', json('POST', { ...validSos, incidentId: l.incidentId, location: l.location }));
+      assert.equal(r.status, 201, l.id);
+    }
   });
 
   for (const [name, patch] of [
@@ -92,7 +158,7 @@ describe('SOS lifecycle', () => {
     ['zero people', { people: 0 }],
     ['fractional people', { people: 2.5 }],
     ['bad type', { type: 'pizza' }],
-    ['empty description', { description: '   ' }],
+    ['non-string description', { description: 42 }],
     ['long description', { description: 'x'.repeat(281) }],
     ['unknown incident', { incidentId: 'NOPE' }],
     ['location outside demo area', { location: { lat: 51.5, lng: -0.12 } }],
@@ -102,7 +168,7 @@ describe('SOS lifecycle', () => {
       const body = patch === undefined ? '' : typeof patch === 'string' ? patch : { ...validSos, ...patch };
       const r = await app.request('/api/sos', json('POST', body));
       assert.equal(r.status, 400);
-      assert.equal(((await r.json()) as any).error, 'invalid SOS');
+      assert.equal(((await r.json()) as { error: string }).error, 'invalid SOS');
     });
   }
 
@@ -124,16 +190,64 @@ describe('SOS lifecycle', () => {
   });
 });
 
-describe('recovery compare route', () => {
-  test('rejects unknown strategy', async () => {
-    assert.equal((await app.request('/api/recovery/compare', json('POST', { strategy: 'magic' }))).status, 400);
+describe('live events', () => {
+  test('the store tells subscribers about every change, and stops after unsubscribe', async () => {
+    const seen: string[] = [];
+    const off = store.subscribe((e) => seen.push(e.type));
+    const s = (await (await app.request('/api/sos', json('POST', validSos))).json()) as Sos;
+    await app.request(`/api/sos/${s.id}`, json('PATCH', { status: 'assigned', assignedTeam: 'A' }));
+    await app.request('/api/demo/reset', { method: 'POST' });
+    assert.deepEqual(seen, ['sos', 'sos', 'reset']);
+    off();
+    await app.request('/api/sos', json('POST', validSos));
+    assert.equal(seen.length, 3);
   });
 
-  test('valid strategy reaches the engine (200 once D4 merges, 501 before)', async () => {
-    const r = await app.request('/api/recovery/compare', json('POST', { strategy: 'priority-first' }));
-    assert.ok(r.status === 200 || r.status === 501, `got ${r.status}`);
-    // Stored inventory is never mutated by a comparison.
-    const rec = (await (await app.request('/api/recovery')).json()) as any;
-    assert.deepEqual(rec.inventory, { water: 220, food: 200, hygiene: 90 });
+  test('a throwing subscriber does not break a request or the other subscribers', async () => {
+    let reached = false;
+    store.subscribe(() => {
+      throw new Error('boom');
+    });
+    store.subscribe(() => (reached = true));
+    assert.equal((await app.request('/api/sos', json('POST', validSos))).status, 201);
+    assert.equal(reached, true);
+  });
+
+  test('GET /api/events is an event stream that pushes a change as soon as a request is created', async () => {
+    const ctl = new AbortController();
+    const r = await app.request('/api/events', { signal: ctl.signal });
+    assert.equal(r.status, 200);
+    assert.match(r.headers.get('content-type') ?? '', /text\/event-stream/);
+    const reader = r.body!.getReader();
+    const dec = new TextDecoder();
+    let text = '';
+    const readUntil = async (needle: string) => {
+      const deadline = Date.now() + 2000;
+      while (!text.includes(needle)) {
+        if (Date.now() > deadline) throw new Error(`timed out waiting for ${needle}; got ${JSON.stringify(text)}`);
+        const { value, done } = await reader.read();
+        if (done) break;
+        text += dec.decode(value, { stream: true });
+      }
+    };
+    await readUntil('event: ready');
+    await app.request('/api/sos', json('POST', validSos));
+    await readUntil('"type":"sos"');
+    assert.match(text, /event: change\ndata: \{"type":"sos"\}/);
+    ctl.abort();
+    await reader.cancel().catch(() => {});
+  });
+
+  test('watchFeed announces a newly released simulated update', async () => {
+    store.startedAt = Date.now();
+    const seen: string[] = [];
+    store.subscribe((e) => seen.push(e.type));
+    const stop = watchFeed(store, async () => [], 15);
+    await new Promise((ok) => setTimeout(ok, 60));
+    assert.deepEqual(seen, []); // nothing new yet
+    store.startedAt = Date.now() - 10 * 60_000; // every update is now due
+    await new Promise((ok) => setTimeout(ok, 80));
+    stop();
+    assert.deepEqual(seen, ['alerts']);
   });
 });
