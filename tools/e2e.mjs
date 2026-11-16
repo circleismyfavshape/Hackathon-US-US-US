@@ -385,6 +385,26 @@ try {
     assert.equal(new URL(page.url()).pathname, '/');
   });
 
+  await step('older scenario responses keep both citizen and responder views usable', async () => {
+    const { mapPoints, roadClosures, ...olderScenario } = await (
+      await fetch(`${base}/api/scenario`)
+    ).json();
+    assert.ok(mapPoints.length && roadClosures.length);
+    const legacy = await ctx.newPage();
+    watch(legacy, 'older scenario');
+    await legacy.route('**/api/scenario', (route) => route.fulfill({ json: olderScenario }));
+    await legacy.goto(`${base}/citizen`);
+    await legacy.locator('.fl-hero').waitFor();
+    await legacy.locator('.fl-map canvas').waitFor();
+    assert.equal(await legacy.locator('.fl-state[role="alert"]').count(), 0);
+    assert.equal(await legacy.locator('.fl-service-pin').count(), 0);
+    await legacy.goto(`${base}/responder`);
+    await legacy.locator('.fl-ops').waitFor();
+    await legacy.locator('.fl-map canvas').waitFor();
+    assert.equal(await legacy.locator('.fl-state[role="alert"]').count(), 0);
+    await legacy.close();
+  });
+
   assert.deepEqual(errors, [], 'browser errors');
   console.log(`\nAll ${steps.length} steps passed. Screenshots are in ${shots}.`);
 } finally {

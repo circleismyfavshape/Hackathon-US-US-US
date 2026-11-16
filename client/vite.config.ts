@@ -6,7 +6,10 @@ import { defineConfig } from 'vite';
 // Dev: Vite on :5173 proxies /api to the single Hono server on :8787.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    dedupe: ['react', 'react-dom'],
+  },
   server: {
     port: 5173,
     proxy: { '/api': 'http://localhost:8787' },

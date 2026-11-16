@@ -431,11 +431,12 @@ export function FlareMap({
     [scenario, focus],
   );
   const points = useMemo(
-    () => scenario.mapPoints.filter((point) => !focus || point.incidentId === focus.id),
+    () => (scenario.mapPoints ?? []).filter((point) => !focus || point.incidentId === focus.id),
     [scenario, focus],
   );
   const closures = useMemo(
-    () => scenario.roadClosures.filter((closure) => !focus || closure.incidentId === focus.id),
+    () =>
+      (scenario.roadClosures ?? []).filter((closure) => !focus || closure.incidentId === focus.id),
     [scenario, focus],
   );
 
