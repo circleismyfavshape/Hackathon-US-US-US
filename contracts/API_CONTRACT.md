@@ -45,6 +45,7 @@ If the stream cannot be opened, clients fall back to polling every 3 s.
 - **Shelter** (a safe zone): `kind` (`relief | medical`), `name`, `note`, `location`. Every safe zone is outside every zone.
 - **Route**: a walking path on the road network from one `demoLocation` to one shelter: `distanceM`, `minutes`, `coordinates`. Every demo location inside a zone has a route to each safe zone of its incident. A route does not know which roads are flooded.
 - **Actions**: what to do, per zone level. **Contacts**: who to call.
+- **demoProfile**: the fictional `CitizenProfile` the demo phone starts from.
 - **MapPoint**: `id`, `incidentId`, `kind` (`police | fire | roadblock | aid`), `name`, `note`, `location`, `sourceType:"simulation"`. These are illustrated operational posts, not verified stations or shelters.
 - **RoadClosure**: `id`, `incidentId`, `name`, `reason`, `coordinates` (a line in `[lng,lat]` order), `sourceType:"simulation"`. Routes do not avoid these segments.
 
@@ -55,6 +56,7 @@ If the stream cannot be opened, clients fall back to polling every 3 s.
 - `incidentId` must exist. `people` is an integer 1 to 50. `type` is one of `trapped | medical-help | supplies | other`.
 - `description` is optional, at most 280 characters, and is trimmed. A person in danger can send a request without typing.
 - `location` must be inside `demoBounds`.
+- `profile` is optional. Absent or `null` means the sender did not share one, and the stored request has `profile: null`. When present it is a `CitizenProfile`: `name` (1 to 60 characters), `age` (integer 1 to 120), and the text fields `idNumber` (24), `phone` (24), `bloodType` (8), `medical` (200), `appearance` (200), `languages` (80) and `emergencyContact` (120), each of which may be empty. Every field is required to be present, text is trimmed, and unknown fields are dropped. An invalid profile rejects the whole request with 400.
 - **Privacy:** `locationMode:"manual-demo"` (a demo place) is rounded to 3 decimal places. `"browser-opt-in"` is rounded to 2 (about 1 km). The client only ever sends a demo place: real GPS picks the nearest one in the browser and goes no further.
 
 ## Alerts
@@ -70,6 +72,7 @@ Clients must show which is which.
 
 ## Version history
 
+- **v2.2** (17 Nov 2026): added `CitizenProfile`, scenario `demoProfile`, and the optional `profile` on a request, returned with it to the responder. Additive: requests without a profile are unchanged.
 - **v2.1** (16 Nov 2026): added scenario `mapPoints` and `roadClosures`, expanded four-area fixtures and announcement timeline. Corrected Civil Defence guidance to the integrated 999 number. Cached weather warnings now expire at their validity boundary.
 - **v2.0** (16 Nov 2026): app-first redesign. Added `/api/scenario`, `/api/events`, zone level `severe`, zone `depth`, incident `area` and `summary`, shelter `kind` and `note`, routes, actions, contacts, alert `title`, `sourceType`, `validTo`, `local`, `url`. `description` became optional. **Removed** the recovery feature: `/api/recovery`, `/api/recovery/compare`, `/api/recovery/explain` and their types.
 - **v1.2**: `/api/alerts`. **v1.1**: experimental recovery endpoints (removed in v2.0). **v1.0**: first shared contract.

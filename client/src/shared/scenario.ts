@@ -1,4 +1,17 @@
-import type { Scenario } from '../../../contracts/types.ts';
+import type { CitizenProfile, Scenario } from '../../../contracts/types.ts';
+
+/** Used only when an older server sends a scenario without a demo profile. */
+const FALLBACK_PROFILE: CitizenProfile = {
+  name: 'Demo Citizen',
+  age: 30,
+  idNumber: '',
+  phone: '',
+  bloodType: '',
+  medical: '',
+  appearance: '',
+  languages: '',
+  emergencyContact: '',
+};
 
 /** Additive map fields may be absent while an older server is still running after a client rebuild. */
 export function parseScenario(value: unknown): Scenario {
@@ -23,5 +36,9 @@ export function parseScenario(value: unknown): Scenario {
     ...scenario,
     mapPoints: Array.isArray(scenario.mapPoints) ? scenario.mapPoints : [],
     roadClosures: Array.isArray(scenario.roadClosures) ? scenario.roadClosures : [],
+    demoProfile:
+      scenario.demoProfile && typeof scenario.demoProfile === 'object'
+        ? { ...FALLBACK_PROFILE, ...scenario.demoProfile }
+        : FALLBACK_PROFILE,
   } as Scenario;
 }

@@ -1,6 +1,7 @@
 import {
   SOS_STATUSES,
   SOS_TYPES,
+  type CitizenProfile,
   type LatLng,
   type SosCreate,
   type SosPatch,
@@ -17,6 +18,53 @@ const round = (value: number, decimalPlaces: number) =>
 export const MAX_DESCRIPTION = 280;
 export const MAX_PEOPLE = 50;
 export const MAX_TEAM = 40;
+export const MAX_AGE = 120;
+
+/** Longest accepted text for each profile field. `name` is the only one that must not be empty. */
+export const PROFILE_LIMITS = {
+  name: 60,
+  idNumber: 24,
+  phone: 24,
+  bloodType: 8,
+  medical: 200,
+  appearance: 200,
+  languages: 80,
+  emergencyContact: 120,
+} as const;
+
+/** Checks an optional shared profile. Returns the trimmed profile, null when none was sent, or the problems found. */
+export function validateProfile(profile: unknown): Result<CitizenProfile | null> {
+  if (profile === undefined || profile === null) {
+    return { ok: true, value: null };
+  }
+  if (!isObject(profile)) {
+    return { ok: false, details: ['profile must be an object'] };
+  }
+  const details: string[] = [];
+  const text = {} as Record<keyof typeof PROFILE_LIMITS, string>;
+  for (const [field, limit] of Object.entries(PROFILE_LIMITS) as [
+    keyof typeof PROFILE_LIMITS,
+    number,
+  ][]) {
+    const value = profile[field];
+    if (typeof value !== 'string' || value.length > limit) {
+      details.push(`profile.${field} must be text of at most ${limit} characters`);
+    } else {
+      text[field] = value.trim();
+    }
+  }
+  if (details.length === 0 && text.name.length === 0) {
+    details.push('profile.name must not be empty');
+  }
+  const { age } = profile;
+  if (!Number.isInteger(age) || (age as number) < 1 || (age as number) > MAX_AGE) {
+    details.push(`profile.age must be an integer 1-${MAX_AGE}`);
+  }
+  if (details.length) {
+    return { ok: false, details };
+  }
+  return { ok: true, value: { ...text, age: age as number } };
+}
 
 export function validateSosCreate(body: unknown, fixtures: DemoFixtures): Result<SosCreate> {
   const details: string[] = [];
@@ -24,7 +72,11 @@ export function validateSosCreate(body: unknown, fixtures: DemoFixtures): Result
     return { ok: false, details: ['body must be a JSON object'] };
   }
 
-  const { incidentId, people, type, description, location, locationMode } = body;
+  const { incidentId, people, type, description, location, locationMode, profile } = body;
+  const checkedProfile = validateProfile(profile);
+  if (!checkedProfile.ok) {
+    details.push(...checkedProfile.details);
+  }
   if (
     typeof incidentId !== 'string' ||
     !fixtures.incidents.some((incident) => incident.id === incidentId)
@@ -76,7 +128,7 @@ export function validateSosCreate(body: unknown, fixtures: DemoFixtures): Result
     }
   }
 
-  if (details.length || !normalizedLocation) {
+  if (details.length || !normalizedLocation || !checkedProfile.ok) {
     return { ok: false, details };
   }
   return {
@@ -88,6 +140,7 @@ export function validateSosCreate(body: unknown, fixtures: DemoFixtures): Result
       description: typeof description === 'string' ? description.trim() : '',
       location: normalizedLocation,
       locationMode: locationMode as SosCreate['locationMode'],
+      profile: checkedProfile.value,
     },
   };
 }
