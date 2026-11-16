@@ -1,38 +1,71 @@
-// Official alerts from MET Malaysia, through data.gov.my. Read-only, server-side, and OFF unless index.ts turns it on.
-// Rules (docs/process/FLARE_TEAM_AUTOPILOT.md section 1): real data carries its provenance and a timestamp, and it never blocks the demo.
-// Any failure falls back to nothing, so /api/alerts keeps serving the simulated alerts.
+// Official weather warnings from MET Malaysia, through data.gov.my. Read-only, fetched on the server (the API sends no CORS header).
+// On by default; FLARE_LIVE_ALERTS=0 turns it off. No key or account is needed.
+// Real data always carries its source and issue time, and it never blocks the app: any failure serves the last good items, or none.
 import type { Alert } from '../../../contracts/types.ts';
 
 export type OfficialAlerts = () => Promise<Alert[]>;
 export const noOfficialAlerts: OfficialAlerts = async () => [];
 
-export const MET_URL = 'https://api.data.gov.my/weather/warning/?limit=8'; // the trailing slash matters: without it the API answers 301
-export const MET_SOURCE = 'MET Malaysia (official, api.data.gov.my)';
+export const MET_URL = 'https://api.data.gov.my/weather/warning/?limit=12'; // the trailing slash matters: without it the API answers 301
+export const MET_SOURCE = 'MET Malaysia';
+export const MET_PAGE = 'https://www.met.gov.my/';
+export const MAX_OFFICIAL = 6;
 
-type Raw = { warning_issue?: { issued?: unknown; title_en?: unknown }; valid_to?: unknown; text_en?: unknown };
+type Raw = { warning_issue?: { issued?: unknown; title_en?: unknown }; valid_to?: unknown; heading_en?: unknown; text_en?: unknown };
 
-/** Map the API's warning list to Alerts. Only warnings that mention Selangor, newest three, malformed rows skipped. */
-export function mapWarnings(raw: unknown, incidentId: string): Alert[] {
+const LOCAL = /selangor|kuala lumpur|putrajaya|klang valley|petaling|subang|shah alam|klang\b/i;
+
+/** MET reports Malaysia time without an offset. */
+const myt = (v: unknown): Date | null => {
+  if (typeof v !== 'string') return null;
+  const d = new Date(`${v}+08:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/** MET bodies are long, upper-case-headed bulletins. Keep the first sentences, as plain prose. */
+export function tidy(text: string, max = 260): string {
+  const flat = text
+    .replace(/SECTION [A-Z]:[^)]*\]\s*/g, '')
+    .replace(/^\d\)\s*[A-Z ]+WARNING\s*/g, '')
+    .replace(/\s*•\s*/g, ', ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '));
+  return `${(stop > 120 ? cut.slice(0, stop + 1) : cut.slice(0, cut.lastIndexOf(' '))).replace(/[,;]$/, '')}…`.replace('.…', '.');
+}
+
+/** Map the API's warning list to feed items: current warnings only, duplicates merged, local ones first, then newest. */
+export function mapWarnings(raw: unknown, now = Date.now()): Alert[] {
   if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
   const out: Alert[] = [];
   for (const r of raw as Raw[]) {
-    const issued = r?.warning_issue?.issued;
+    const issued = myt(r?.warning_issue?.issued);
     const title = r?.warning_issue?.title_en;
-    if (typeof issued !== 'string' || typeof title !== 'string') continue;
-    if (typeof r.text_en !== 'string' || !/selangor/i.test(r.text_en)) continue;
-    const at = new Date(`${issued}+08:00`); // MET reports Malaysia time without an offset
-    if (Number.isNaN(at.getTime())) continue;
-    const until = typeof r.valid_to === 'string' ? ` Valid until ${r.valid_to.slice(0, 10)}.` : '';
+    if (!issued || typeof title !== 'string' || typeof r.text_en !== 'string') continue;
+    if (/^no advisory$/i.test(title.trim())) continue; // "nothing to report" rows
+    const validTo = myt(r.valid_to);
+    if (validTo && validTo.getTime() < now) continue; // expired
+    const key = `${title}|${r.warning_issue?.issued}`;
+    if (seen.has(key)) continue; // MET lists one bulletin once per validity window
+    seen.add(key);
     out.push({
-      id: `MET-${issued}-${out.length}`,
-      incidentId,
-      kind: /flood|rain/i.test(title) ? 'flood' : 'update',
-      text: `${title}.${until}`,
+      id: `MET-${String(r.warning_issue?.issued)}-${title.replace(/\W+/g, '-').toLowerCase()}`,
+      incidentId: null,
+      kind: /flood|rain/i.test(title) ? 'flood' : 'weather', // by title only: most bulletins mention rain somewhere in the body
+      title,
+      text: tidy(r.text_en),
       source: MET_SOURCE,
-      at: at.toISOString(),
+      sourceType: 'official',
+      at: issued.toISOString(),
+      validTo: validTo ? validTo.toISOString() : null,
+      local: LOCAL.test(r.text_en),
+      url: MET_PAGE,
     });
   }
-  return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 3);
+  return out.sort((a, b) => Number(b.local) - Number(a.local) || b.at.localeCompare(a.at)).slice(0, MAX_OFFICIAL);
 }
 
 type Options = {
@@ -41,10 +74,9 @@ type Options = {
   ttlMs?: number;
   failTtlMs?: number;
   timeoutMs?: number;
-  incidentId?: string;
 };
 
-export function createMetAlerts({ fetchImpl = fetch, now = Date.now, ttlMs = 5 * 60_000, failTtlMs = 60_000, timeoutMs = 4000, incidentId = 'INC-DEMO-001' }: Options = {}): OfficialAlerts {
+export function createMetAlerts({ fetchImpl = fetch, now = Date.now, ttlMs = 2 * 60_000, failTtlMs = 30_000, timeoutMs = 4000 }: Options = {}): OfficialAlerts {
   let cache: { until: number; items: Alert[] } | null = null;
   let inflight: Promise<Alert[]> | null = null;
 
@@ -52,11 +84,11 @@ export function createMetAlerts({ fetchImpl = fetch, now = Date.now, ttlMs = 5 *
     try {
       const res = await fetchImpl(MET_URL, { signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json' } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const items = mapWarnings(await res.json(), incidentId);
+      const items = mapWarnings(await res.json(), now());
       cache = { until: now() + ttlMs, items };
       return items;
     } catch {
-      // Keep serving the last good items. Cache the failure briefly so a dead network does not add the timeout to every poll.
+      // Keep serving the last good items. Cache the failure briefly so a dead network does not add the timeout to every request.
       const items = cache?.items ?? [];
       cache = { until: now() + failTtlMs, items };
       return items;
