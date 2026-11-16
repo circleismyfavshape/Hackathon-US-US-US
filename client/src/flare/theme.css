@@ -555,21 +555,63 @@ html.fl-embedded *::-webkit-scrollbar {
 }
 .fl-toast {
   pointer-events: auto;
+  position: relative;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(8px);
+  animation: fl-drop 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+  /* The banner follows the finger, so the browser must not scroll or select text during a swipe. */
+  touch-action: none;
+  user-select: none;
+  transition:
+    transform 0.18s ease-out,
+    opacity 0.18s ease-out;
+}
+.fl-toast[data-dragging] {
+  transition: none;
+  cursor: grabbing;
+}
+.fl-toast-main {
   display: grid;
   grid-template-columns: 38px 1fr;
   gap: 11px;
   align-items: start;
   width: 100%;
   padding: 12px 13px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
   text-align: left;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--blue);
-  border-radius: 16px;
   cursor: pointer;
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(8px);
-  animation: fl-drop 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}
+/* Wide screens get a close button. On the phone the banner is swiped away instead. */
+.fl-toast-close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink-2);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+}
+.fl-toast-close:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.fl-app-embedded .fl-toast-close,
+.fl-phoneapp .fl-toast-close {
+  display: none;
 }
 .fl-toast[data-tone='danger'] {
   border-left-color: var(--severe);
@@ -1127,8 +1169,8 @@ html.fl-embedded *::-webkit-scrollbar {
 .fl-tabbar {
   flex: none;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding: 6px 6px calc(8px + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(5, 1fr);
+  padding: 6px 4px calc(8px + env(safe-area-inset-bottom));
   background: var(--card);
   border-top: 1px solid var(--line);
 }
@@ -2275,4 +2317,279 @@ html.fl-embedded *::-webkit-scrollbar {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ── Map: hide or show the information drawn over it ───────────────── */
+.fl-map-info {
+  position: absolute;
+  z-index: 10;
+  top: 196px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.fl-map-info:hover {
+  background: var(--soft);
+}
+.fl-map-info[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ── News: which update is the most recent ─────────────────────────── */
+.fl-latest {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #bcd0fb;
+  border-radius: var(--r);
+  background: var(--blue-soft);
+  text-align: left;
+  cursor: pointer;
+}
+.fl-latest i,
+.fl-news-flag[data-latest]::before {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+.fl-latest i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: fl-ping 1.8s ease-out infinite;
+}
+.fl-latest span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.fl-latest small {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+.fl-latest strong {
+  font-size: 15px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fl-latest > svg {
+  color: #1d4ed8;
+}
+.fl-news header {
+  justify-content: flex-start;
+}
+.fl-news header time {
+  margin-left: auto;
+}
+.fl-news-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 99px;
+  background: var(--soft);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.fl-news-flag[data-latest] {
+  background: var(--blue);
+  color: #fff;
+}
+.fl-news-flag[data-latest]::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #fff;
+}
+.fl-news[data-latest] {
+  border-color: #93b4f8;
+  box-shadow:
+    0 0 0 2px rgba(37, 99, 235, 0.16),
+    var(--shadow);
+}
+.fl-news[data-latest] header time,
+.fl-news[data-new] header time {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Profile ───────────────────────────────────────────────────────── */
+.fl-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.fl-profile-head,
+.fl-who-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.fl-profile-head > div,
+.fl-who-head > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.fl-profile-head strong {
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.fl-profile-head small,
+.fl-who-head small {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.fl-profile-rows,
+.fl-who-rows {
+  display: grid;
+  gap: 6px;
+}
+.fl-profile-rows > div,
+.fl-who-rows > div {
+  display: grid;
+  gap: 1px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--soft);
+}
+.fl-profile-rows dt,
+.fl-who-rows dt {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.fl-profile-rows dd,
+.fl-who-rows dd {
+  font-size: 14.5px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.fl-profile-why {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.fl-profile-why svg {
+  margin-top: 1px;
+  color: var(--safe);
+}
+.fl-profile-form {
+  gap: 12px;
+}
+.fl-profile-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fl-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 15px;
+}
+.fl-input[aria-invalid='true'] {
+  border-color: var(--severe);
+}
+.fl-who {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.fl-who-head strong {
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.fl-who-rows > div {
+  grid-template-columns: 108px 1fr;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+}
+.fl-who-rows dd {
+  font-size: 14px;
+}
+.fl-qitem-who {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.fl-sendas {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 11px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--soft);
+  cursor: pointer;
+}
+.fl-sendas > span:not(.fl-avatar) {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.fl-sendas strong {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.fl-sendas small {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.fl-sendas input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+.fl-who-more summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+}
+.fl-who-more[open] summary {
+  margin-bottom: 8px;
 }

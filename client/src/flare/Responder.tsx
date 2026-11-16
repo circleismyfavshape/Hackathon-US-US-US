@@ -16,6 +16,7 @@ import {
   useSosList,
 } from './data.ts';
 import { FlareMap, MapLegend } from './FlareMap.tsx';
+import { Avatar, ProfileCard } from './profile.tsx';
 import {
   Crash,
   LoadState,
@@ -199,6 +200,12 @@ function Console({ scenario }: { scenario: Scenario }) {
                       </strong>
                       <StatusTag status={s.status} />
                     </span>
+                    {s.profile && (
+                      <span className="fl-qitem-who">
+                        <Avatar name={s.profile.name} size={22} />
+                        {s.profile.name}, {s.profile.age}
+                      </span>
+                    )}
                     <span className="fl-qitem-place">{placeOf(s, scenario)}</span>
                     <span className="fl-qitem-meta">
                       <span className="fl-id">{s.id}</span>
@@ -306,6 +313,14 @@ function Detail({
         </div>
         <StatusTag status={sos.status} />
       </div>
+
+      {sos.profile ? (
+        <ProfileCard profile={sos.profile} />
+      ) : (
+        <p className="fl-fine" data-testid="no-profile">
+          The citizen did not share a profile.
+        </p>
+      )}
 
       <dl className="fl-facts fl-facts-stack">
         <div>

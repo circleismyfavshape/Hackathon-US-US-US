@@ -8,6 +8,8 @@ import {
   Check,
   ChevronRight,
   Cross,
+  Eye,
+  EyeOff,
   Footprints,
   House,
   LifeBuoy,
@@ -21,6 +23,7 @@ import {
   ShieldCheck,
   Stethoscope,
   TriangleAlert,
+  UserRound,
   Waves,
 } from 'lucide-react';
 import { metres, nearest } from '../features/citizen/geo.ts';
@@ -53,6 +56,7 @@ import {
   type Situation,
 } from './data.ts';
 import { FlareMap, MapLegend } from './FlareMap.tsx';
+import { Avatar, ProfileView, useProfile } from './profile.tsx';
 import {
   Crash,
   LevelTag,
@@ -66,7 +70,7 @@ import {
   type Toast,
 } from './ui.tsx';
 
-type Tab = 'guide' | 'map' | 'news' | 'help';
+type Tab = 'guide' | 'map' | 'news' | 'help' | 'profile';
 const SOS_KEY = 'flare.citizen.sosId';
 const SEEN_KEY = 'flare.citizen.newsSeenAt';
 
@@ -190,12 +194,25 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
     sit.danger?.incident.id ?? location.incidentId,
   );
   const [seenAt, setSeenAt] = useState(() => safeStorage.get(SEEN_KEY) ?? '');
+  // Directions open flat, because a route is easiest to follow from straight above. The map tab itself opens in 3D.
+  const [routeView, setRouteView] = useState(false);
+  const [flatRequest, setFlatRequest] = useState(0);
+  // The legend, the route card and the layer list can be hidden to leave the whole screen to the map.
+  const [mapInfo, setMapInfo] = useState(true);
 
   const chosen = sit.options.find((o) => o.shelter.id === shelterId) ?? sit.options[0] ?? null;
   const dangerId = sit.danger?.incident.id ?? null;
   // A route is drawn when you are in danger, or when you picked a safe zone yourself.
   const route = sit.danger || shelterId ? (chosen?.route ?? null) : null;
-  const go = useCallback((t: Tab) => setTab(wide && t === 'map' ? 'guide' : t), [wide]);
+  const go = useCallback(
+    (t: Tab) => {
+      if (t === 'map') {
+        setRouteView(false);
+      }
+      setTab(wide && t === 'map' ? 'guide' : t);
+    },
+    [wide],
+  );
 
   // Moving to a new place: start again from that place's guide. Entering a danger zone raises the alert.
   const lastLoc = useRef(location.id);
@@ -324,6 +341,8 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
         setShelterId(id);
       }
       setFocusId(dangerId ?? location.incidentId);
+      setRouteView(true);
+      setFlatRequest((count) => count + 1);
       if (!wide) {
         setTab('map');
       }
@@ -341,9 +360,12 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
   );
 
   const map = (
-    <div className="fl-mapwrap">
+    <div className="fl-mapwrap" data-info={mapInfo ? 'shown' : 'hidden'}>
       <FlareMap
         scenario={scenario}
+        startFlat={routeView}
+        flatRequest={flatRequest}
+        showInfo={mapInfo}
         focusId={focusId}
         onPickIncident={setFocusId}
         user={location}
@@ -355,16 +377,28 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
           }
         }}
       />
-      <MapLegend />
-      <MapCard
-        scenario={scenario}
-        sit={sit}
-        focusId={focusId}
-        chosen={route ? chosen : null}
-        onBack={() => setFocusId(dangerId ?? location.incidentId)}
-        onAll={() => setFocusId(null)}
-        onPick={setShelterId}
-      />
+      {mapInfo && <MapLegend />}
+      {mapInfo && (
+        <MapCard
+          scenario={scenario}
+          sit={sit}
+          focusId={focusId}
+          chosen={route ? chosen : null}
+          onBack={() => setFocusId(dangerId ?? location.incidentId)}
+          onAll={() => setFocusId(null)}
+          onPick={setShelterId}
+        />
+      )}
+      <button
+        type="button"
+        className="fl-map-info"
+        onClick={() => setMapInfo((shown) => !shown)}
+        aria-pressed={!mapInfo}
+        data-testid="map-info-toggle"
+      >
+        {mapInfo ? <EyeOff size={15} aria-hidden /> : <Eye size={15} aria-hidden />}
+        {mapInfo ? 'Hide info' : 'Show info'}
+      </button>
     </div>
   );
 
@@ -376,9 +410,12 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
         ok={feed.ok}
         scenario={scenario}
         nearId={dangerId ?? location.incidentId}
+        seenAt={seenAt}
         onArea={openArea}
         onRetry={feed.refresh}
       />
+    ) : tab === 'profile' ? (
+      <ProfileView scenario={scenario} />
     ) : tab === 'help' ? (
       <Help scenario={scenario} sit={sit} sos={my.sos} onSent={my.track} onClear={my.clear} />
     ) : (
@@ -409,6 +446,7 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
       Icon: LifeBuoy,
       badge: Boolean(my.sos && my.sos.status !== 'resolved'),
     },
+    { id: 'profile', label: 'Profile', Icon: UserRound },
   ];
 
   if (wide) {
@@ -813,6 +851,8 @@ type NewsProps = {
   ok: boolean;
   scenario: Scenario;
   nearId: string;
+  /** Time of the newest item the person had already seen before opening this tab. Empty on a first visit. */
+  seenAt: string;
   onRetry: () => void;
   onArea: (id: string) => void;
 };
@@ -823,31 +863,61 @@ const KIND_LABEL = {
   weather: 'Weather',
 } as const;
 
-function News({ alerts, loaded, ok, scenario, nearId, onArea, onRetry }: NewsProps) {
+function News({ alerts, loaded, ok, scenario, nearId, seenAt, onArea, onRetry }: NewsProps) {
   const now = useNow();
   const [filter, setFilter] = useState<'all' | 'near' | 'official'>('all');
-  const official = alerts.filter((a) => a.sourceType === 'official');
-  const scenarioItems = alerts.filter((a) => a.sourceType === 'simulation');
+  // Fixed when the tab opens: opening it marks everything as seen, but what was new should stay marked while you read.
+  const [seenBefore] = useState(seenAt);
+  const newestFirst = (list: Alert[]) => [...list].sort((a, b) => b.at.localeCompare(a.at));
+  const official = newestFirst(alerts.filter((a) => a.sourceType === 'official'));
+  const scenarioItems = newestFirst(alerts.filter((a) => a.sourceType === 'simulation'));
   const near = scenarioItems.filter((a) => a.incidentId === nearId);
   const elsewhere = scenarioItems.filter((a) => a.incidentId !== nearId);
   const areaOf = (a: Alert) => scenario.incidents.find((i) => i.id === a.incidentId) ?? null;
+
+  // The single most recent item among those on screen gets the "Latest" mark and the strip at the top.
+  const visible = [
+    ...(filter !== 'official' ? near : []),
+    ...(filter !== 'near' ? official : []),
+    ...(filter === 'all' ? elsewhere : []),
+  ];
+  const latest = visible.reduce<Alert | null>(
+    (best, a) => (!best || a.at > best.at ? a : best),
+    null,
+  );
+  const isNew = (a: Alert) => seenBefore !== '' && a.at > seenBefore;
+  const newCount = visible.filter(isNew).length;
+  const showLatest = () =>
+    document
+      .getElementById(`fl-news-${latest?.id}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   const item = (a: Alert) => {
     const area = areaOf(a);
     return (
       <li key={a.id}>
         <article
+          id={`fl-news-${a.id}`}
           className="fl-news"
           data-kind={a.kind}
           data-official={a.sourceType === 'official' || undefined}
+          data-latest={a.id === latest?.id || undefined}
+          data-new={isNew(a) || undefined}
         >
           <header>
             <span className="fl-news-kind">{KIND_LABEL[a.kind]}</span>
+            {a.id === latest?.id ? (
+              <span className="fl-news-flag" data-latest>
+                Latest
+              </span>
+            ) : (
+              isNew(a) && <span className="fl-news-flag">New</span>
+            )}
             <time
               dateTime={a.at}
               title={new Date(a.at).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
             >
-              {ago(a.at, now)}
+              {ago(a.at, now)} · {clockMY(a.at)}
             </time>
           </header>
           <h3>{a.title}</h3>
@@ -930,19 +1000,32 @@ function News({ alerts, loaded, ok, scenario, nearId, onArea, onRetry }: NewsPro
         />
       ) : (
         <>
+          {latest && (
+            <button type="button" className="fl-latest" onClick={showLatest} data-testid="latest">
+              <i aria-hidden />
+              <span>
+                <small>
+                  Most recent · {ago(latest.at, now)}
+                  {newCount > 0 && ` · ${newCount} new since your last visit`}
+                </small>
+                <strong>{latest.title}</strong>
+              </span>
+              <ChevronRight size={18} aria-hidden />
+            </button>
+          )}
           {filter !== 'official' &&
-            section('Near you', 'Simulated scenario', near, 'No updates for your area yet.')}
+            section('Near you', 'Simulated · newest first', near, 'No updates for your area yet.')}
           {filter !== 'near' &&
             section(
               'Official weather warnings',
-              'Live from MET Malaysia',
+              'Live from MET Malaysia · newest first',
               official,
               'No official warnings are in force right now, or the MET Malaysia feed could not be reached.',
             )}
           {filter === 'all' &&
             section(
               'Other areas',
-              'Simulated scenario',
+              'Simulated · newest first',
               elsewhere,
               'Nothing from other areas yet.',
             )}
@@ -979,6 +1062,8 @@ function Help({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [share, setShare] = useState(true);
+  const { profile } = useProfile(scenario);
   const now = useNow();
 
   const send = async () => {
@@ -996,6 +1081,7 @@ function Help({
           description: note.trim(),
           location: sit.location.location,
           locationMode: 'manual-demo',
+          profile: share ? profile : null,
         }),
       );
       setNote('');
@@ -1152,6 +1238,24 @@ function Help({
           placeholder="For example: second floor, one elderly person, water still rising"
         />
 
+        <label className="fl-sendas">
+          <Avatar name={profile.name} size={40} />
+          <span>
+            <strong>{share ? `Sending as ${profile.name}` : 'Sending without your profile'}</strong>
+            <small>
+              {share
+                ? `Age ${profile.age}. Responders will see your profile.`
+                : 'Responders will only see your location and need.'}
+            </small>
+          </span>
+          <input
+            type="checkbox"
+            checked={share}
+            onChange={(event) => setShare(event.target.checked)}
+            aria-label="Share my profile with responders"
+            data-testid="share-profile"
+          />
+        </label>
         <p className="fl-sendfrom">
           <MapPin size={15} aria-hidden /> Sending from <strong>{sit.location.label}</strong>
         </p>

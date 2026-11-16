@@ -2,7 +2,7 @@
 // whoever is testing), notifications, small tags, and a crash screen.
 import '@fontsource-variable/geist';
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { LocateFixed, Monitor, RotateCcw, Smartphone } from 'lucide-react';
+import { LocateFixed, Monitor, RotateCcw, Smartphone, X } from 'lucide-react';
 import { nearest } from '../features/citizen/geo.ts';
 import {
   api,
@@ -355,30 +355,121 @@ export function useToasts() {
 export function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: string) => void }) {
   return (
     <div className="fl-toasts" aria-live="polite">
-      {toasts.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          className="fl-toast"
-          data-tone={t.tone ?? 'info'}
-          onClick={() => {
-            t.onClick?.();
-            dismiss(t.id);
-          }}
-        >
-          <span className="fl-toast-icon">
-            <FlareMark height={18} />
-          </span>
-          <span className="fl-toast-text">
-            <span className="fl-toast-top">
-              <b>{t.title}</b>
-              <i>now</i>
-            </span>
-            <span className="fl-toast-body">{t.body}</span>
-            {t.meta && <span className="fl-toast-meta">{t.meta}</span>}
-          </span>
-        </button>
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} dismiss={dismiss} />
       ))}
+    </div>
+  );
+}
+
+const SWIPE_AWAY_PX = 80;
+const SWIPE_UP_PX = 40;
+
+/** One banner. Tap it to open what it is about. Clear it by swiping it sideways or up (touch or mouse), or with
+ *  the close button shown on wide screens. It also clears itself after a few seconds. */
+function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: string) => void }) {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [leaving, setLeaving] = useState(false);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  // A drag must not also count as a tap on the banner.
+  const dragged = useRef(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (leaveTimer.current) {
+        clearTimeout(leaveTimer.current);
+      }
+    },
+    [],
+  );
+
+  const release = () => {
+    if (!start.current) {
+      return;
+    }
+    start.current = null;
+    if (Math.abs(offset.x) > SWIPE_AWAY_PX || offset.y < -SWIPE_UP_PX) {
+      // Carry on in the direction of the swipe, then remove it.
+      setLeaving(true);
+      setOffset({ x: Math.sign(offset.x) * 420, y: offset.y < -SWIPE_UP_PX ? -160 : 0 });
+      leaveTimer.current = setTimeout(() => dismiss(toast.id), 180);
+    } else {
+      setOffset({ x: 0, y: 0 });
+    }
+  };
+
+  const moving = offset.x !== 0 || offset.y !== 0;
+  return (
+    <div
+      className="fl-toast"
+      data-tone={toast.tone ?? 'info'}
+      data-dragging={(moving && !leaving) || undefined}
+      data-leaving={leaving || undefined}
+      style={
+        moving
+          ? {
+              transform: `translate(${offset.x}px, ${offset.y}px)`,
+              opacity: Math.max(0, 1 - Math.max(Math.abs(offset.x) / 260, -offset.y / 130)),
+            }
+          : undefined
+      }
+      onPointerDown={(event) => {
+        if (event.button !== 0 || leaving) {
+          return;
+        }
+        start.current = { x: event.clientX, y: event.clientY };
+        dragged.current = false;
+      }}
+      onPointerMove={(event) => {
+        if (!start.current) {
+          return;
+        }
+        const dx = event.clientX - start.current.x;
+        const dy = event.clientY - start.current.y;
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6 && !dragged.current) {
+          return;
+        }
+        dragged.current = true;
+        // Follow the stronger direction only: sideways either way, or upwards.
+        setOffset(Math.abs(dx) >= Math.abs(dy) ? { x: dx, y: 0 } : { x: 0, y: Math.min(0, dy) });
+      }}
+      onPointerUp={release}
+      onPointerLeave={release}
+      onPointerCancel={release}
+    >
+      <button
+        type="button"
+        className="fl-toast-main"
+        onClick={() => {
+          if (dragged.current) {
+            dragged.current = false;
+            return;
+          }
+          toast.onClick?.();
+          dismiss(toast.id);
+        }}
+      >
+        <span className="fl-toast-icon">
+          <FlareMark height={18} />
+        </span>
+        <span className="fl-toast-text">
+          <span className="fl-toast-top">
+            <b>{toast.title}</b>
+            <i>now</i>
+          </span>
+          <span className="fl-toast-body">{toast.body}</span>
+          {toast.meta && <span className="fl-toast-meta">{toast.meta}</span>}
+        </span>
+      </button>
+      <button
+        type="button"
+        className="fl-toast-close"
+        onClick={() => dismiss(toast.id)}
+        aria-label={`Dismiss notification: ${toast.title}`}
+        title="Dismiss"
+      >
+        <X size={15} aria-hidden />
+      </button>
     </div>
   );
 }

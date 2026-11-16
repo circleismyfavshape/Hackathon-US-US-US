@@ -385,6 +385,12 @@ type Props = {
   onSelectRequest?: (id: string) => void;
   /** A still picture: no gestures, no controls. */
   preview?: boolean;
+  /** Open looking straight down instead of tilted. The person can still switch with the 2D/3D button. */
+  startFlat?: boolean;
+  /** Raise this number to switch an already open map to the flat view (for example when directions are asked for). */
+  flatRequest?: number;
+  /** Show the "Map layers" list and the police, fire and aid labels. Off when the person asked for a clear view. */
+  showInfo?: boolean;
 };
 
 const ringPoints = (rings: [number, number][][]): LatLng[] =>
@@ -402,9 +408,21 @@ export function FlareMap({
   selectedRequestId,
   onSelectRequest,
   preview = false,
+  startFlat = false,
+  flatRequest = 0,
+  showInfo = true,
 }: Props) {
   const reachable = useBasemap();
-  const [flat, setFlat] = useState(false);
+  const [flat, setFlat] = useState(startFlat);
+  const lastFlatRequest = useRef(flatRequest);
+  useEffect(() => {
+    if (flatRequest !== lastFlatRequest.current) {
+      lastFlatRequest.current = flatRequest;
+      setFlat(true);
+    }
+  }, [flatRequest]);
+  // The tilt the map is created with. Later changes go through <Camera>, which animates them.
+  const [initialFlat] = useState(startFlat);
   const [showServices, setShowServices] = useState(true);
   const [showClosures, setShowClosures] = useState(true);
   const focus = scenario.incidents.find((i) => i.id === focusId) ?? null;
@@ -506,8 +524,8 @@ export function FlareMap({
           blank={!reachable}
           bounds={target}
           fitBoundsOptions={{ padding: pad, maxZoom: 16.4 }}
-          pitch={TILT}
-          bearing={BEARING}
+          pitch={initialFlat ? 0 : TILT}
+          bearing={initialFlat ? 0 : BEARING}
           maxPitch={70}
           interactive={!preview}
           attributionControl={{ compact: true }}
@@ -515,7 +533,7 @@ export function FlareMap({
           <Layers zones={zones} route={routeLine} />
           <Camera target={target} cameraKey={cameraKey} flat={flat} pad={pad} />
           {!preview && showClosures && <ClosureLayers closures={closures} />}
-          {!preview && showServices && <ServiceMarkers points={points} />}
+          {!preview && showServices && showInfo && <ServiceMarkers points={points} />}
 
           {/* Flood areas: a chip over each one. It opens the area. */}
           {!preview &&
@@ -628,7 +646,7 @@ export function FlareMap({
 
           {!preview && <MapControls position="top-right" showZoom showCompass />}
         </Map>
-        {!preview && (
+        {!preview && showInfo && (
           <details className="fl-map-layers">
             <summary>
               <LayersIcon size={15} aria-hidden /> Map layers
