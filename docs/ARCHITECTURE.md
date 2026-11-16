@@ -2,6 +2,8 @@
 
 FLARE is a React client and a single Hono server, joined by shared TypeScript types and one scenario fixture. It has no database or external dispatch integration.
 
+The API client checks the core scenario response before rendering. Operational map fields added in v2.1 default to empty arrays when an older API process is still running, so either main view remains usable during an update. Restart the server to load the current scenario and its newer layers.
+
 ## Follow a request
 
 1. `Citizen.tsx` sends a `SosCreate` through `shared/api.ts`. Optional note text is normalised by server validation.

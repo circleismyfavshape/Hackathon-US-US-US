@@ -94,6 +94,8 @@ More detail: [data boundaries](docs/REAL_DATA.md), [research and references](doc
 
 ## Run locally
 
+When updating an existing installation, stop the running API and development client before installing dependencies, then restart them. This keeps the app and server on the same version and refreshes the development dependency cache.
+
 Requires **Node.js 20.19+** and npm. From the repository root:
 
 ```bash
@@ -172,7 +174,7 @@ client/src/components/ui/ Adapted map component
 contracts/                API types, endpoint documentation and scenario fixture
 server/src/               HTTP routes, request store, fixture loading and weather adapter
 server/tests/             API, event stream, geometry, scenario and weather checks
-tools/                    Browser walkthrough, route maintenance and project message board
+tools/                    Browser checks and route maintenance
 docs/                     Architecture, scenarios, walkthrough, references and screenshots
 ```
 
@@ -188,7 +190,7 @@ docs/                     Architecture, scenarios, walkthrough, references and s
 
 The browser walkthrough checks the citizen/responder lifecycle, map layers, all four areas, contextual notes, mobile layouts and connection failures. It also produces the screenshots shown here. See [architecture and maintenance notes](docs/ARCHITECTURE.md) and [contribution guidance](CONTRIBUTING.md).
 
-The [latest review record](docs/VALIDATION.md) reports **75 passing tests** and **20 passing browser steps in both production and development mode**, with the scope and remaining limits stated alongside the results.
+The [latest review record](docs/VALIDATION.md) reports **78 passing tests** and **21 passing browser steps in both production and development mode**, with the scope and remaining limits stated alongside the results.
 
 ## Current limits
 
@@ -206,8 +208,6 @@ Contributions overlapped across the project; these are the main areas each membe
 | [Sajid](https://github.com/69sxjid)             | Application foundation, backend lead, API contracts, integration and shared UI.                                                                    |
 | [Awais](https://github.com/Vais1)               | Frontend lead, Citizen experience, maps, location and DF checks, live weather data and documentation.                                              |
 | [Ahmed](https://github.com/circleismyfavshape)  | Full-stack support, Logo, branding, stratagy and early resource-allocation work.                                                                   |
-
-Led and currently maintained by **[Khaled Morshed](https://github.com/jeffyoh312)**.
 
 ## License
 
