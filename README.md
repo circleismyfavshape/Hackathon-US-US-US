@@ -1,41 +1,49 @@
 <p align="center">
-  <img src="docs/flare-logo.jpg" alt="FLARE" width="260" />
+  <img src="docs/flare-logo.jpg" alt="FLARE" width="240" />
 </p>
 
 <h1 align="center">FLARE</h1>
 
-<p align="center"><strong>From the first alert to the last unmet need.</strong></p>
+<p align="center"><strong>When the water rises, FLARE tells you what to do next.</strong></p>
 
-<p align="center">A disaster response and recovery platform that follows one request for help<br />from the person who sends it to the supplies that still have to reach them.</p>
+<p align="center">A flood alert app that knows where you are. The moment your location is inside a flood zone it alerts you,<br />then shows only what matters: what to do now, who to call, and the way to the nearest safe zone.</p>
 
-> **Hackathon demonstration.** The flood areas, shelters, teams and requests are simulated. Nothing sent here reaches an emergency service. In a real emergency call 999.
+> **Hackathon demonstration.** The floods, zones, safe zones, teams and requests are simulated. The weather warnings are real (MET Malaysia). Nothing sent here reaches an emergency service. In a real emergency call 999.
+
+| The alert | The emergency guide | The 3D map and route |
+|---|---|---|
+| ![Lock screen alert](docs/screenshots/01-landing.png) | ![Emergency guide on the phone](docs/screenshots/02-phone-emergency-guide.png) | ![3D map with the route to a safe zone](docs/screenshots/03-phone-map-route.png) |
 
 ---
 
 ## The problem
 
-During a flood, the alert, the call for help and the relief stock usually live in three separate systems. A citizen gets a warning in one place, asks for help in another, and nobody can see whether supplies ever reached them. Each handover is a place where a person gets lost.
+Flood apps show a map of everything. A person standing in rising water does not need everything. They need to know three things in the next ten seconds: am I in danger, what do I do, and where do I go. And when they ask for help, they need to see that someone has it.
 
 ## What FLARE does
 
-FLARE keeps all three on one line. A single request keeps the same ID from the moment it is sent until it is resolved, and the same scenario feeds the citizen, the responder and the recovery planner.
+**It starts with one alert.** FLARE checks the phone's location against the marked flood zones. Inside one, it sends an emergency notification. The front door of this demo (`/`) is that moment: a phone on its lock screen.
 
-| | Interface | Route | What it proves |
-|---|---|---|---|
-| 01 | **Citizen** | `/citizen` | A live map of every flood area with a feed of sourced updates. Pick an area, check your location, send a request, get a real ID back and watch its status change. |
-| 02 | **First responder** | `/responder` | That same request, with the same ID, appears in a live queue and on the map. Assigning a team or resolving it reaches the citizen within seconds. |
-| 03 | **Recovery** | `/recovery` | When stock is short, four allocation strategies give different centres the shortfall. Every unit is shown; nothing is hidden in a total. |
+**Opening the alert opens a guide, not a dashboard.**
 
-The front door (`/`) has two views with a **Phone / Desktop** switch at the top:
+- **What to do now**: four plain steps, chosen by how bad the zone is (severe, high or moderate).
+- **Who to call**: 999 and the civil defence and disaster lines, one tap each.
+- **Where to go**: the nearest safe zones with walking time, and the route drawn on a 3D map.
+- **Request rescue**: three taps. No typing needed.
 
-- **Phone** (default): a phone on its lock screen with one **EMERGENCY FLOOD** notification. Opening the notification opens the citizen interface, the way it would start for a real person.
-- **Desktop** (`/?view=desktop`): the three interfaces as numbered rows, each with a live figure.
+Outside a flood zone the same screen is calm: where the nearest flood is, and what to keep ready.
 
-| Citizen | First responder | Recovery |
+**The map is 3D.** Real buildings stand up from the street map. Each flood zone is a block of water whose colour and height show its damage level. Safe zones are green pins, and the walking route follows real roads. The scenario includes **Bandar Sunway, around Sunway University and Monash University**, plus Shah Alam, Subang Jaya and Klang.
+
+**News you can read.** Official weather warnings from MET Malaysia arrive live and are labelled *Official*. Scenario updates are labelled *Simulated*. They are never mixed in one list.
+
+**Responders see every request at once.** A request appears in the first responder console, in the queue and on the map, in well under a second. Sending a team or resolving it updates the citizen's phone just as fast.
+
+| News | Request sent, team on the way | First responder console |
 |---|---|---|
-| ![Citizen map and flood areas](docs/screenshots/02-citizen-overview.png) | ![Responder queue](docs/screenshots/06-responder-queue.png) | ![Recovery strategies](docs/screenshots/10-recovery.png) |
+| ![News and warnings](docs/screenshots/04-phone-news.png) | ![Team on the way](docs/screenshots/07-phone-team-on-the-way.png) | ![Responder console](docs/screenshots/06-responder-console.png) |
 
-## Quick start
+## Try it
 
 Requires **Node 20.19 or newer** and npm.
 
@@ -47,120 +55,123 @@ npm install
 npm start
 ```
 
-`npm start` builds the client and serves everything on <http://localhost:8787>.
+Then open <http://localhost:8787> and tap the alert on the phone.
 
 | Command | What it does |
 |---|---|
 | `npm start` | Build the client, then serve the app and API on `:8787` |
 | `npm run dev` | Live reload: client on `:5173`, API on `:8787` |
-| `npm test` | Server, API and allocation engine tests |
+| `npm test` | Server tests: API, live events, geometry, scenario integrity, MET feed |
 | `npm run build` | Client build and server typecheck |
 | `npm run typecheck` | Typecheck both workspaces |
+| `node tools/e2e.mjs` | The whole story in a real browser; retakes `docs/screenshots` (see the file header) |
 
-The server reads `index.html` once at startup, so restart it after a rebuild.
+### Finding your way around the demo
 
-If a page says **Map unavailable** or "The FLARE API server is not running", the client is up but the API on `:8787` is not. Stop everything and run `npm run dev` again; it now stops both halves if either one dies, so it never runs half-started.
+The product is the phone app. Everything a tester needs that is *not* part of the product sits in the bar above it:
 
-### Optional environment variables
+| Control | What it does |
+|---|---|
+| **View as** Citizen / First responder | Switch between the two sides of the same incident. |
+| **On** Phone / Desktop | Show the current view in a phone frame or on the full screen. |
+| **Citizen is at** | Move the simulated citizen. Put them inside a zone and the app raises the alert; move them out and it goes calm. The target button uses the demo place nearest your real location (your position never leaves the browser). |
+| **Reset** | Clear every request and restart the scenario. |
+
+A good two-minute run: open `/`, tap the alert, read the guide, open the map, send a request from **Get help**. Open a second tab on **First responder**, send a team, and watch the phone change. The step-by-step script is in [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md).
+
+### Routes
+
+| Path | View |
+|---|---|
+| `/` | The lock-screen alert |
+| `/phone/citizen` | The citizen app in a phone frame (where the alert leads) |
+| `/citizen` | The citizen app on a wide screen, beside the map |
+| `/phone/responder`, `/responder` | The first responder console |
+
+### Environment variables
 
 | Variable | Effect |
 |---|---|
 | `PORT` | Port for the server. Default `8787`. |
-| `FLARE_LIVE_ALERTS=1` | The updates feed shows official MET Malaysia weather warnings (via `api.data.gov.my`, no key needed) instead of the simulated ones. Needs internet. Off by default. See [docs/REAL_DATA.md](docs/REAL_DATA.md). |
-| `ANTHROPIC_API_KEY` | Recovery offers an AI summary of the allocation engine's numbers. Without it the button hides itself. |
+| `FLARE_LIVE_ALERTS=0` | Turn off the official MET Malaysia warnings. They are on by default, need no key, and need internet. If the feed cannot be reached the news simply has no official items. |
 
-The map needs internet for street tiles. Offline it falls back to zones and pins on a blank canvas, and without WebGL the panels still work.
-
-## Demo in 90 seconds
-
-Use two browser tabs on one server. The full script, with fallbacks, is in [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md).
-
-1. **`/`** Read the headline, then tap the **EMERGENCY FLOOD** notification on the phone.
-2. **Citizen.** Open **Shah Alam**, pick a location inside the high-impact zone, choose *Trapped*, 3 people, add a line, and send. Read out the request ID.
-3. **`/responder`** in the second tab. The same ID is at the top of the queue and pulsing on the map. Assign a team.
-4. Back on the citizen tab it already says *Team assigned*. Mark it resolved on the responder tab and the citizen tab follows.
-5. **`/recovery`** "280 units short. Who goes without?" Step through the four strategies: *Priority first* leaves one centre with 7%; *Proportional* gives everyone about 65%.
-
-**Reset demo**, at the bottom of the responder detail panel, clears every request before a pitch.
-
-### Phone view
-
-`/phone/citizen` and `/phone/responder` (or the **Phone view** button in the header) show the same live page inside a phone frame at real phone size. It scrolls, and notifications drop in at the top like push alerts.
+The map needs internet for street tiles and buildings (OpenFreeMap). Offline it falls back to a blank canvas that still shows zones, pins and routes.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    C[Citizen<br/>/citizen] -- "POST /api/sos" --> S[(Hono server<br/>in-memory store)]
-    S -- "status, polled every 2.5 s" --> C
-    R[First responder<br/>/responder] -- "PATCH /api/sos/:id" --> S
-    S -- "live queue" --> R
-    S -- "needs and stock" --> E[Allocation engine<br/>4 strategies]
-    E --> V[Recovery<br/>/recovery]
-    M[MET Malaysia<br/>optional] -. "official warnings" .-> S
+    P[Citizen app] -- "request help" --> S[(FLARE server<br/>in memory)]
+    S == "push: status changed" ==> P
+    R[First responder console] -- "send team / resolve" --> S
+    S == "push: new request" ==> R
+    M[MET Malaysia] -. "official warnings" .-> S
+    S == "push: news" ==> P
 ```
 
-- **One server.** A single [Hono](https://hono.dev) server holds the scenario and every request in memory and serves the built client. There is no database and no sign-in.
-- **One contract.** The client and server share types and seed data from [`contracts/`](contracts/). The API is documented in [contracts/API_CONTRACT.md](contracts/API_CONTRACT.md).
-- **One map.** Citizen and responder use the same map component, zones, pins and legend.
-- **A real allocation engine.** `server/src/recovery/` compares *priority first*, *proportional*, *equal share* and an *optimized* integer program (GLPK.js). It is pure and deterministic: allocated plus unmet always equals what was requested.
+- **One server, pushed updates.** A single [Hono](https://hono.dev) server holds the scenario and every request in memory. Every open page keeps one server-sent-events stream (`GET /api/events`); when anything changes the server says so and pages refetch at once. Slow polling stays underneath as a safety net.
+- **The danger check is geometry.** A location is tested against each zone polygon, worst level first (`client/src/features/citizen/geo.ts`). The guide, the alert and the map all read that one answer.
+- **Routes are real roads.** Walking routes from each demo place to each safe zone were computed once on the OpenStreetMap road network and stored with the scenario, so they work offline. They do not know which roads are flooded, and the app says so.
+- **One contract.** Client and server share types and scenario data from [`contracts/`](contracts/). The API is documented in [contracts/API_CONTRACT.md](contracts/API_CONTRACT.md).
+- **Privacy.** Real GPS is never sent or stored. It only picks the nearest demo place, in the browser.
 
 ### Tech stack
 
 | Layer | Tools |
 |---|---|
-| Client | React 19, TypeScript, Vite 6, Tailwind CSS 4, MapLibre GL (through mapcn), Lucide icons, Geist |
-| Server | Node, Hono, tsx, GLPK.js, Anthropic SDK (optional summary) |
-| Tests | Node's built-in test runner |
+| Client | React 19, TypeScript, Vite 6, MapLibre GL through the mapcn map component, OpenFreeMap vector tiles, Tailwind CSS 4 (map component only), Lucide icons, Geist |
+| Server | Node, Hono, server-sent events, tsx |
+| Tests | Node's built-in test runner; Playwright for the browser run |
 
 ## Project structure
 
 ```
-client/
-  src/
-    App.tsx                 Routes only
-    flare/                  The whole front end
-      flare.css, extra.css  Design system
-      ui.tsx                Shared shell, notifications
-      FlareMap.tsx          Shared map
-      Landing.tsx           Lock screen front door
-      Citizen.tsx  Responder.tsx  Recovery.tsx  Phone.tsx
-    shared/                 Typed API client, logo
-    features/citizen/geo.ts Map geometry (tested on the server side)
-    components/ui/map.tsx   mapcn map component
-contracts/                  API contract, shared types, seed data
+client/src/
+  App.tsx                   Routes only
+  flare/
+    theme.css               Design system
+    ui.tsx                  Viewer bar, notifications, shared pieces
+    data.ts                 Live data hooks, simulated location, "what is my situation"
+    FlareMap.tsx            The 3D map
+    Landing.tsx             Lock-screen alert
+    Citizen.tsx             The citizen app: guide, map, news, get help
+    Responder.tsx           The first responder console
+    Phone.tsx               Phone frame
+  features/citizen/geo.ts   Danger-zone geometry (tested on the server side)
+  shared/                   Typed API client with the live stream, logo
+  components/ui/map.tsx     mapcn map component
+contracts/                  API contract, shared types, scenario data
 server/
-  src/
-    app.ts, index.ts        HTTP routes and startup
-    store/, seed/, routes/  In-memory store, fixtures, validation
-    recovery/               Allocation engine and AI summary
-    live/met.ts             Optional MET Malaysia warnings
-  tests/                    API, geometry, engine and live-feed tests
+  src/app.ts, index.ts      HTTP routes, live stream, startup
+  src/store/, seed/         In-memory store, scenario loader
+  src/live/met.ts           Official MET Malaysia warnings
+  tests/                    API, live events, geometry, scenario and feed tests
+tools/e2e.mjs               End-to-end browser run and screenshots
 docs/
-  DEMO_RUNBOOK.md           The pitch, step by step
+  DEMO_RUNBOOK.md           The demo, step by step
   REAL_DATA.md              What is real, what is simulated, and why
-  screenshots/              Backup screenshots of every demo step
-  process/                  Planning documents from the hackathon
+  screenshots/              Taken by tools/e2e.mjs
+  process/                  Planning notes from the hackathon day (history only)
 ```
 
 ## Design rules
 
-- Paper and ink, hairline rules, mono labels for data. Use the classes in `flare.css`; do not add a new colour, font, radius or shadow.
-- Orange is the only signal colour and always means "needs attention". Amber means in progress, green means done.
-- The same words everywhere: *Pending*, *Team assigned*, *Resolved*.
-- Say what is simulated in plain words. Never imply an area is safe or that a route is suggested.
+- Calm and clean: white cards on a soft grey page, one typeface, sentence case.
+- Colour carries meaning and nothing else. Red, orange and amber are flood damage levels. Green is safe zones, routes and "resolved". Blue is you, links and official sources.
+- In an emergency, show less. The first screen is for getting out; everything else is one tap away.
+- Say what is simulated in plain words, wherever a person could mistake it for real.
 
 ## Limits
 
-Synthetic data only, apart from the optional MET Malaysia warnings. No sign-in. Requests are held in memory and reset when the server restarts. Zones are illustrative, not a measured flood footprint. Shelters and teams are fictional.
+The floods, zones, safe zones and teams are fictional; place names and roads are real. Zones are illustrative, not a measured flood footprint. Routes do not account for flooded roads. There is no sign-in. Requests are held in memory and are lost when the server restarts.
 
 ## Team
 
 | | GitHub | Role |
 |---|---|---|
 | Khaled | [@jeffyoh312](https://github.com/jeffyoh312) | Team lead, responder workflows, QA |
-| Sajid | [@69sxjid](https://github.com/69sxjid) | Backend, integration, unified front end |
+| Sajid | [@69sxjid](https://github.com/69sxjid) | Backend, integration |
 | Awais | [@Vais1](https://github.com/Vais1) | Citizen experience, map and geometry, live data |
-| Ahmed | [@circleismyfavshape](https://github.com/circleismyfavshape) | Allocation engine, logo |
+| Ahmed | [@circleismyfavshape](https://github.com/circleismyfavshape) | Allocation engine (retired with the Recovery feature), logo |
 
 Built with coding agents working in parallel. They coordinate through a pinned GitHub issue using `tools/board`; the rules are in [AGENTS.md](AGENTS.md).

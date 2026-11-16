@@ -1,12 +1,4 @@
-import {
-  SOS_STATUSES,
-  SOS_TYPES,
-  STRATEGIES,
-  type LatLng,
-  type SosCreate,
-  type SosPatch,
-  type Strategy,
-} from '../../../contracts/types.ts';
+import { SOS_STATUSES, SOS_TYPES, type LatLng, type SosCreate, type SosPatch } from '../../../contracts/types.ts';
 import type { DemoFixtures } from '../seed/index.ts';
 
 type Result<T> = { ok: true; value: T } | { ok: false; details: string[] };
@@ -26,8 +18,9 @@ export function validateSosCreate(body: unknown, fx: DemoFixtures): Result<SosCr
   if (typeof incidentId !== 'string' || !fx.incidents.some((i) => i.id === incidentId)) d.push('incidentId must be a known incident id');
   if (!Number.isInteger(people) || (people as number) < 1 || (people as number) > MAX_PEOPLE) d.push(`people must be an integer 1-${MAX_PEOPLE}`);
   if (typeof type !== 'string' || !(SOS_TYPES as readonly string[]).includes(type)) d.push(`type must be one of ${SOS_TYPES.join(', ')}`);
-  if (typeof description !== 'string' || description.trim().length === 0 || description.length > MAX_DESCRIPTION)
-    d.push(`description must be 1-${MAX_DESCRIPTION} characters`);
+  // Optional: a person in danger must be able to send a request without typing anything.
+  if (description !== undefined && (typeof description !== 'string' || description.length > MAX_DESCRIPTION))
+    d.push(`description must be at most ${MAX_DESCRIPTION} characters`);
   if (locationMode !== 'manual-demo' && locationMode !== 'browser-opt-in') d.push('locationMode must be manual-demo or browser-opt-in');
 
   let loc: LatLng | null = null;
@@ -51,7 +44,7 @@ export function validateSosCreate(body: unknown, fx: DemoFixtures): Result<SosCr
       incidentId: incidentId as string,
       people: people as number,
       type: type as SosCreate['type'],
-      description: (description as string).trim(),
+      description: typeof description === 'string' ? description.trim() : '',
       location: loc,
       locationMode: locationMode as SosCreate['locationMode'],
     },
@@ -69,10 +62,4 @@ export function validateSosPatch(body: unknown): Result<SosPatch> {
     return { ok: true, value: { status, assignedTeam: assignedTeam.trim() } };
   }
   return { ok: true, value: { status: status as 'resolved' | 'pending' } };
-}
-
-export function validateStrategy(body: unknown): Result<Strategy> {
-  if (!isObj(body) || typeof body.strategy !== 'string' || !(STRATEGIES as readonly string[]).includes(body.strategy))
-    return { ok: false, details: [`strategy must be one of ${STRATEGIES.join(', ')}`] };
-  return { ok: true, value: body.strategy as Strategy };
 }
