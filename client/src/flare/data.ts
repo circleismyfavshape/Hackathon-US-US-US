@@ -23,23 +23,42 @@ export const errText = (e: unknown) =>
 export function useScenario() {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const active = useRef(false);
+  const requestId = useRef(0);
   const load = useCallback(() => {
+    const currentRequest = ++requestId.current;
     setError(null);
     api.scenario().then(
-      (s) =>
-        s.incidents.length
-          ? setScenario(s)
-          : setError('No flood information is available right now.'),
-      (e) => setError(errText(e)),
+      (next) => {
+        if (!active.current || currentRequest !== requestId.current) {
+          return;
+        }
+        if (next.incidents.length) {
+          setScenario(next);
+        } else {
+          setError('No flood information is available right now.');
+        }
+      },
+      (error) => {
+        if (active.current && currentRequest === requestId.current) {
+          setError(errText(error));
+        }
+      },
     );
   }, []);
   useEffect(() => {
+    active.current = true;
     load();
-    return onLive((type) => {
+    const unsubscribe = onLive((type) => {
       if (type === 'reset') {
         load();
       }
     });
+    return () => {
+      active.current = false;
+      requestId.current++;
+      unsubscribe();
+    };
   }, [load]);
   return { scenario, error, reload: load };
 }
@@ -54,6 +73,7 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     ok: true,
   });
   const seq = useRef(0);
+  const active = useRef(false);
   const fetchRef = useRef(fetcher);
   fetchRef.current = fetcher;
   const types = on.join(',');
@@ -62,17 +82,18 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     const mine = ++seq.current;
     try {
       const data = await fetchRef.current();
-      if (mine === seq.current) {
+      if (active.current && mine === seq.current) {
         setState({ data, loaded: true, ok: true });
       }
     } catch {
-      if (mine === seq.current) {
+      if (active.current && mine === seq.current) {
         setState((s) => ({ ...s, ok: false }));
       }
     }
   }, []);
 
   useEffect(() => {
+    active.current = true;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     const loop = () => {
@@ -84,7 +105,9 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
           if (document.visibilityState === 'visible') {
             await refresh();
           }
-          loop();
+          if (!stopped) {
+            loop();
+          }
         },
         liveConnected() ? 20_000 : 3000,
       );
@@ -105,6 +128,8 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       stopped = true;
+      active.current = false;
+      seq.current++;
       clearTimeout(timer);
       off();
       document.removeEventListener('visibilitychange', onVisible);

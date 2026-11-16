@@ -2,6 +2,7 @@
 // guide is an emergency screen (what to do, who to call, the way to a safe zone); outside one it is a calm status.
 // Map, news and "request help" are one tap away on the tab bar. On a wide screen the same pieces sit beside the map.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePhoneFeature } from './phoneNotes.ts';
 import {
   ArrowRight,
   Check,
@@ -22,7 +23,7 @@ import {
   TriangleAlert,
   Waves,
 } from 'lucide-react';
-import { metres } from '../features/citizen/geo.ts';
+import { metres, nearest } from '../features/citizen/geo.ts';
 import {
   api,
   liveConnected,
@@ -112,17 +113,20 @@ function useMySos() {
       return setSos(null);
     }
     let stopped = false;
+    let requestId = 0;
     let timer: ReturnType<typeof setTimeout>;
     const load = async () => {
+      const currentRequest = ++requestId;
       try {
         const next = await api.getSos(id);
-        if (!stopped) {
+        if (!stopped && currentRequest === requestId) {
           setSos(next);
         }
       } catch (e) {
         // The server no longer knows this request (it was reset or restarted): stop tracking it.
         if (
           !stopped &&
+          currentRequest === requestId &&
           e instanceof Error &&
           'status' in e &&
           (e as { status: number }).status === 404
@@ -139,7 +143,9 @@ function useMySos() {
             return;
           }
           await load();
-          loop();
+          if (!stopped) {
+            loop();
+          }
         },
         liveConnected() ? 20_000 : 3000,
       );
@@ -178,6 +184,7 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
   const my = useMySos();
   const { toasts, push, dismiss } = useToasts();
   const [tab, setTab] = useState<Tab>('guide');
+  usePhoneFeature(tab);
   const [shelterId, setShelterId] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(
     sit.danger?.incident.id ?? location.incidentId,
@@ -370,6 +377,7 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
         scenario={scenario}
         nearId={dangerId ?? location.incidentId}
         onArea={openArea}
+        onRetry={feed.refresh}
       />
     ) : tab === 'help' ? (
       <Help scenario={scenario} sit={sit} sos={my.sos} onSent={my.track} onClear={my.clear} />
@@ -668,8 +676,8 @@ function Guide({
             {chosen.shelter.name.split(',')[0]}
           </button>
           <p className="fl-fine">
-            Routes follow real roads but cannot see which ones are flooded. If the way is under
-            water, turn back and go up.
+            Routes follow roads but do not avoid floods or marked closures. Access is not verified.
+            Do not enter floodwater.
           </p>
         </section>
       )}
@@ -759,6 +767,9 @@ function MapCard({ scenario, sit, focusId, chosen, onBack, onAll, onPick }: MapC
             <strong>{chosen.shelter.name}</strong>
             <small>
               <b>{chosen.minutes} min walk</b> · {metres(chosen.distanceM)} · {chosen.shelter.note}
+              <span className="fl-route-warning">
+                Route does not avoid floods or marked closures. Access is not verified.
+              </span>
             </small>
           </>
         ) : (
@@ -802,6 +813,7 @@ type NewsProps = {
   ok: boolean;
   scenario: Scenario;
   nearId: string;
+  onRetry: () => void;
   onArea: (id: string) => void;
 };
 const KIND_LABEL = {
@@ -811,7 +823,7 @@ const KIND_LABEL = {
   weather: 'Weather',
 } as const;
 
-function News({ alerts, loaded, ok, scenario, nearId, onArea }: NewsProps) {
+function News({ alerts, loaded, ok, scenario, nearId, onArea, onRetry }: NewsProps) {
   const now = useNow();
   const [filter, setFilter] = useState<'all' | 'near' | 'official'>('all');
   const official = alerts.filter((a) => a.sourceType === 'official');
@@ -912,7 +924,10 @@ function News({ alerts, loaded, ok, scenario, nearId, onArea }: NewsProps) {
         </p>
       )}
       {!loaded ? (
-        <LoadState error={null} onRetry={() => {}} />
+        <LoadState
+          error={ok ? null : 'News could not be loaded. Check the connection and try again.'}
+          onRetry={onRetry}
+        />
       ) : (
         <>
           {filter !== 'official' &&
@@ -993,6 +1008,11 @@ function Help({
 
   if (sos) {
     const at = STEPS.indexOf(sos.status);
+    // A request keeps its original location even when the viewer moves the simulated citizen.
+    const sentFrom = nearest(
+      sos.location,
+      scenario.demoLocations.filter((place) => place.incidentId === sos.incidentId),
+    );
     return (
       <>
         <div className="fl-pagehead">
@@ -1044,7 +1064,7 @@ function Help({
             </div>
             <div>
               <dt>From</dt>
-              <dd>{sit.location.label}</dd>
+              <dd>{sentFrom.label}</dd>
             </div>
           </dl>
           {sos.description && <p className="fl-quote">“{sos.description}”</p>}

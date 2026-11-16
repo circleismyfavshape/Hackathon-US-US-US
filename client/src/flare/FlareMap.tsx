@@ -10,10 +10,18 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import { Box, Cross, House, Square } from 'lucide-react';
+import { Box, Cross, House, Layers as LayersIcon, Square } from 'lucide-react';
 import type { FeatureCollection, LineString } from 'geojson';
 import type * as MapLibreGL from 'maplibre-gl';
-import { Map, MapControls, MapMarker, MarkerContent, useMap } from '@/components/ui/map';
+import {
+  Map,
+  MapControls,
+  MapMarker,
+  MarkerContent,
+  MarkerPopup,
+  useMap,
+} from '@/components/ui/map';
+import { ClosureLayers, ServiceMarkers } from './ScenarioLayers.tsx';
 import { boundsOf, zonesGeoJson } from '../features/citizen/geo.ts';
 import {
   ZONE_LEVELS,
@@ -397,6 +405,8 @@ export function FlareMap({
 }: Props) {
   const reachable = useBasemap();
   const [flat, setFlat] = useState(false);
+  const [showServices, setShowServices] = useState(true);
+  const [showClosures, setShowClosures] = useState(true);
   const focus = scenario.incidents.find((i) => i.id === focusId) ?? null;
 
   const zones = useMemo(() => zonesGeoJson(scenario.incidents.flatMap((i) => i.zones)), [scenario]);
@@ -418,6 +428,14 @@ export function FlareMap({
   );
   const shelters = useMemo(
     () => (focus ? scenario.shelters.filter((s) => s.incidentId === focus.id) : scenario.shelters),
+    [scenario, focus],
+  );
+  const points = useMemo(
+    () => scenario.mapPoints.filter((point) => !focus || point.incidentId === focus.id),
+    [scenario, focus],
+  );
+  const closures = useMemo(
+    () => scenario.roadClosures.filter((closure) => !focus || closure.incidentId === focus.id),
     [scenario, focus],
   );
 
@@ -491,10 +509,12 @@ export function FlareMap({
           bearing={BEARING}
           maxPitch={70}
           interactive={!preview}
-          attributionControl={preview ? false : { compact: true }}
+          attributionControl={{ compact: true }}
         >
           <Layers zones={zones} route={routeLine} />
           <Camera target={target} cameraKey={cameraKey} flat={flat} pad={pad} />
+          {!preview && showClosures && <ClosureLayers closures={closures} />}
+          {!preview && showServices && <ServiceMarkers points={points} />}
 
           {/* Flood areas: a chip over each one. It opens the area. */}
           {!preview &&
@@ -537,19 +557,34 @@ export function FlareMap({
                 onClick={() => onSelectShelter?.(s.id)}
               >
                 <MarkerContent>
-                  <div
+                  <button
+                    type="button"
                     className="fl-pin fl-pin-safe"
                     data-on={on || undefined}
                     data-quiet={(!focus && !on) || undefined}
-                    role={onSelectShelter ? 'button' : undefined}
                     aria-label={`Safe zone: ${s.name}`}
                   >
                     <span className="fl-pin-dot">
                       <Icon size={14} aria-hidden />
                     </span>
-                    <span className="fl-pin-label">{s.name.split(',')[0]}</span>
-                  </div>
+                    <span className="fl-pin-label">
+                      <small>{s.kind === 'medical' ? 'Hospital / clinic' : 'Shelter'}</small>
+                      {s.name.split(',')[0]}
+                    </span>
+                  </button>
                 </MarkerContent>
+                {!preview && (
+                  <MarkerPopup closeButton>
+                    <div className="fl-map-popup">
+                      <small>
+                        Simulation · {s.kind === 'medical' ? 'Medical care' : 'Relief point'}
+                      </small>
+                      <strong>{s.name}</strong>
+                      <p>{s.note}</p>
+                      <p>Scenario listing. Real opening and safe access are not verified.</p>
+                    </div>
+                  </MarkerPopup>
+                )}
               </MapMarker>
             );
           })}
@@ -593,6 +628,30 @@ export function FlareMap({
           {!preview && <MapControls position="top-right" showZoom showCompass />}
         </Map>
         {!preview && (
+          <details className="fl-map-layers">
+            <summary>
+              <LayersIcon size={15} aria-hidden /> Map layers
+            </summary>
+            <label>
+              <input
+                type="checkbox"
+                checked={showServices}
+                onChange={(event) => setShowServices(event.target.checked)}
+              />{' '}
+              Police, fire and aid
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={showClosures}
+                onChange={(event) => setShowClosures(event.target.checked)}
+              />{' '}
+              Roadblocks and closures
+            </label>
+            <p>All operational markers are simulated.</p>
+          </details>
+        )}
+        {!preview && (
           <button
             type="button"
             className="fl-map-tilt"
@@ -622,7 +681,10 @@ export function MapLegend({ responder = false }: { responder?: boolean }) {
       ))}
       <span>
         <i style={css('#16a34a')} />
-        Safe zone
+        Shelter / medical
+      </span>
+      <span>
+        <i data-line style={css('#b91c1c')} /> Closed road
       </span>
       {responder ? (
         <>

@@ -1,3 +1,5 @@
+// Adapted from mapcn. Copyright (c) 2025 Anmoldeep Singh, MIT.
+// See THIRD_PARTY_NOTICES.md at the repository root for the full notice.
 'use client';
 
 import type * as MapLibreGL from 'maplibre-gl';
