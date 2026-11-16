@@ -1,10 +1,23 @@
 // Shared data hooks. Every view reads the same server through the typed API client, and refetches the moment
 // the server says something changed (shared/api.ts onLive), with slow polling underneath as a safety net.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, liveConnected, onLive, type Alert, type DemoLocation, type LiveEvent, type Route, type Scenario, type Shelter, type Sos, type ZoneLevel } from '../shared/api.ts';
+import {
+  api,
+  liveConnected,
+  onLive,
+  type Alert,
+  type DemoLocation,
+  type LiveEvent,
+  type Route,
+  type Scenario,
+  type Shelter,
+  type Sos,
+  type ZoneLevel,
+} from '../shared/api.ts';
 import { dangerAt, distanceM } from '../features/citizen/geo.ts';
 
-export const errText = (e: unknown) => (e instanceof Error ? e.message : 'The service could not be reached.');
+export const errText = (e: unknown) =>
+  e instanceof Error ? e.message : 'The service could not be reached.';
 
 /* ── Scenario (static until the demo is reset) ────────────────────── */
 export function useScenario() {
@@ -13,14 +26,19 @@ export function useScenario() {
   const load = useCallback(() => {
     setError(null);
     api.scenario().then(
-      (s) => (s.incidents.length ? setScenario(s) : setError('No flood information is available right now.')),
+      (s) =>
+        s.incidents.length
+          ? setScenario(s)
+          : setError('No flood information is available right now.'),
       (e) => setError(errText(e)),
     );
   }, []);
   useEffect(() => {
     load();
     return onLive((type) => {
-      if (type === 'reset') load();
+      if (type === 'reset') {
+        load();
+      }
     });
   }, [load]);
   return { scenario, error, reload: load };
@@ -30,7 +48,11 @@ export function useScenario() {
 /** Fetches now, whenever the server announces one of `on`, when the tab becomes visible again, and on a slow timer
  *  (faster while the push stream is down). A slower earlier response can never overwrite a newer one. */
 function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial: T) {
-  const [state, setState] = useState<{ data: T; loaded: boolean; ok: boolean }>({ data: initial, loaded: false, ok: true });
+  const [state, setState] = useState<{ data: T; loaded: boolean; ok: boolean }>({
+    data: initial,
+    loaded: false,
+    ok: true,
+  });
   const seq = useRef(0);
   const fetchRef = useRef(fetcher);
   fetchRef.current = fetcher;
@@ -40,9 +62,13 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     const mine = ++seq.current;
     try {
       const data = await fetchRef.current();
-      if (mine === seq.current) setState({ data, loaded: true, ok: true });
+      if (mine === seq.current) {
+        setState({ data, loaded: true, ok: true });
+      }
     } catch {
-      if (mine === seq.current) setState((s) => ({ ...s, ok: false }));
+      if (mine === seq.current) {
+        setState((s) => ({ ...s, ok: false }));
+      }
     }
   }, []);
 
@@ -52,8 +78,12 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     const loop = () => {
       timer = setTimeout(
         async () => {
-          if (stopped) return;
-          if (document.visibilityState === 'visible') await refresh();
+          if (stopped) {
+            return;
+          }
+          if (document.visibilityState === 'visible') {
+            await refresh();
+          }
           loop();
         },
         liveConnected() ? 20_000 : 3000,
@@ -63,10 +93,14 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     loop();
     const wanted = types.split(',');
     const off = onLive((type) => {
-      if (type === 'resync' || type === 'reset' || wanted.includes(type)) void refresh();
+      if (type === 'resync' || type === 'reset' || wanted.includes(type)) {
+        void refresh();
+      }
     });
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void refresh();
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -96,12 +130,18 @@ export function useAlerts() {
 }
 
 /** Calls `onNew` for items that arrive after the first load. */
-export function useArrivals<T extends { id: string }>(items: T[], loaded: boolean, onNew: (item: T) => void) {
+export function useArrivals<T extends { id: string }>(
+  items: T[],
+  loaded: boolean,
+  onNew: (item: T) => void,
+) {
   const seen = useRef<Set<string> | null>(null);
   const cb = useRef(onNew);
   cb.current = onNew;
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded) {
+      return;
+    }
     if (seen.current === null) {
       seen.current = new Set(items.map((i) => i.id));
       return;
@@ -130,8 +170,11 @@ const safeStorage = {
   },
   set: (k: string, v: string | null) => {
     try {
-      if (v === null) localStorage.removeItem(k);
-      else localStorage.setItem(k, v);
+      if (v === null) {
+        localStorage.removeItem(k);
+      } else {
+        localStorage.setItem(k, v);
+      }
     } catch {
       /* private mode: the value just lasts for this page */
     }
@@ -139,7 +182,9 @@ const safeStorage = {
 };
 export { safeStorage };
 
-export function useDemoLocation(scenario: Scenario | null): [DemoLocation | null, (id: string) => void] {
+export function useDemoLocation(
+  scenario: Scenario | null,
+): [DemoLocation | null, (id: string) => void] {
   const [id, setId] = useState<string | null>(() => safeStorage.get(LOC_KEY));
   useEffect(() => {
     const sync = () => setId(safeStorage.get(LOC_KEY));
@@ -156,14 +201,26 @@ export function useDemoLocation(scenario: Scenario | null): [DemoLocation | null
     window.dispatchEvent(new Event(LOC_EVENT));
   }, []);
   const location = useMemo(() => {
-    if (!scenario) return null;
-    return scenario.demoLocations.find((l) => l.id === id) ?? scenario.demoLocations.find((l) => l.id === scenario.defaultLocationId) ?? scenario.demoLocations[0] ?? null;
+    if (!scenario) {
+      return null;
+    }
+    return (
+      scenario.demoLocations.find((l) => l.id === id) ??
+      scenario.demoLocations.find((l) => l.id === scenario.defaultLocationId) ??
+      scenario.demoLocations[0] ??
+      null
+    );
   }, [scenario, id]);
   return [location, choose];
 }
 
 /* ── What the app knows about where you are ───────────────────────── */
-export type SafeOption = { shelter: Shelter; route: Route | null; distanceM: number; minutes: number };
+export type SafeOption = {
+  shelter: Shelter;
+  route: Route | null;
+  distanceM: number;
+  minutes: number;
+};
 export type Situation = {
   location: DemoLocation;
   /** The marked zone the location is in, or null when it is outside every marked zone. */
@@ -182,33 +239,81 @@ export function situationAt(scenario: Scenario, location: DemoLocation): Situati
   const pool = scenario.shelters.filter((s) => s.incidentId === incidentId);
   const options = (pool.length ? pool : scenario.shelters)
     .map((shelter): SafeOption => {
-      const route = scenario.routes.find((r) => r.fromLocationId === location.id && r.shelterId === shelter.id) ?? null;
+      const route =
+        scenario.routes.find(
+          (r) => r.fromLocationId === location.id && r.shelterId === shelter.id,
+        ) ?? null;
       const straight = distanceM(location.location, shelter.location);
-      return { shelter, route, distanceM: route?.distanceM ?? Math.round(straight * 1.3), minutes: route?.minutes ?? Math.max(1, Math.ceil((straight * 1.3) / WALK_M_PER_MIN)) };
+      return {
+        shelter,
+        route,
+        distanceM: route?.distanceM ?? Math.round(straight * 1.3),
+        minutes: route?.minutes ?? Math.max(1, Math.ceil((straight * 1.3) / WALK_M_PER_MIN)),
+      };
     })
     // Relief points first, quickest first. Medical points come after: they are for injuries, not for shelter.
-    .sort((a, b) => Number(a.shelter.kind === 'medical') - Number(b.shelter.kind === 'medical') || a.minutes - b.minutes);
-  const near = scenario.incidents.map((i) => ({ area: i.area, id: i.id, metres: distanceM(location.location, i.location) })).sort((a, b) => a.metres - b.metres)[0] ?? null;
+    .sort(
+      (a, b) =>
+        Number(a.shelter.kind === 'medical') - Number(b.shelter.kind === 'medical') ||
+        a.minutes - b.minutes,
+    );
+  const near =
+    scenario.incidents
+      .map((i) => ({ area: i.area, id: i.id, metres: distanceM(location.location, i.location) }))
+      .sort((a, b) => a.metres - b.metres)[0] ?? null;
   return { location, danger, options, nearestFlood: near };
 }
 
 /* ── Words and colours shared by every view ───────────────────────── */
-export const LEVEL_COLOR: Record<ZoneLevel, string> = { severe: '#dc2626', high: '#ea580c', moderate: '#d97706' };
-export const LEVEL_NAME: Record<ZoneLevel, string> = { severe: 'Severe', high: 'High', moderate: 'Moderate' };
-export const SEVERITY_COLOR = { severe: '#dc2626', high: '#ea580c', moderate: '#d97706', low: '#64748b' } as const;
-export const SEVERITY_NAME = { severe: 'Severe', high: 'High', moderate: 'Moderate', low: 'Watch' } as const;
+export const LEVEL_COLOR: Record<ZoneLevel, string> = {
+  severe: '#dc2626',
+  high: '#ea580c',
+  moderate: '#d97706',
+};
+export const LEVEL_NAME: Record<ZoneLevel, string> = {
+  severe: 'Severe',
+  high: 'High',
+  moderate: 'Moderate',
+};
+export const SEVERITY_COLOR = {
+  severe: '#dc2626',
+  high: '#ea580c',
+  moderate: '#d97706',
+  low: '#64748b',
+} as const;
+export const SEVERITY_NAME = {
+  severe: 'Severe',
+  high: 'High',
+  moderate: 'Moderate',
+  low: 'Watch',
+} as const;
 
 /** "just now", "4 min ago", "2 h ago", then the date. */
 export function ago(iso: string, now = Date.now()): string {
   const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
-  if (s < 45) return 'just now';
-  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} min ago`;
-  if (s < 86_400) return `${Math.round(s / 3600)} h ago`;
-  return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', timeZone: 'Asia/Kuala_Lumpur' });
+  if (s < 45) {
+    return 'just now';
+  }
+  if (s < 3600) {
+    return `${Math.max(1, Math.round(s / 60))} min ago`;
+  }
+  if (s < 86_400) {
+    return `${Math.round(s / 3600)} h ago`;
+  }
+  return new Date(iso).toLocaleDateString('en-MY', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'Asia/Kuala_Lumpur',
+  });
 }
 
 export const clockMY = (d: string | number | Date) =>
-  new Date(d).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kuala_Lumpur' });
+  new Date(d).toLocaleTimeString('en-MY', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Kuala_Lumpur',
+  });
 
 /** Re-renders once a minute so "4 min ago" stays true. */
 export function useNow(ms = 30_000) {

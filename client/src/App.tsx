@@ -17,7 +17,9 @@ export default function App() {
   const path = usePath();
   // Old links (for example /recovery, which was removed) land on the front door instead of a blank page.
   useEffect(() => {
-    if (!KNOWN.has(path)) window.history.replaceState(null, '', '/');
+    if (!KNOWN.has(path)) {
+      window.history.replaceState(null, '', '/');
+    }
   }, [path]);
 
   return (
