@@ -2,13 +2,13 @@
 
 ## Real
 
-| What | Source | How it is used |
-|---|---|---|
-| Weather warnings | MET Malaysia, through `https://api.data.gov.my/weather/warning/` (no key, free) | Fetched on the server (`server/src/live/met.ts`), shown in **News** under "Official weather warnings", each with its issue time, labelled *Official*. New ones raise a notification. |
-| Streets and buildings on the map | OpenStreetMap contributors, served by OpenFreeMap | The 3D basemap. |
-| Place names | Real places in Bandar Sunway, Shah Alam, Subang Jaya and Klang | Demo locations and safe zones are named after them. |
-| Walking routes | OpenStreetMap road network (ODbL), computed once with the OSRM foot profile and stored in `contracts/demo-fixtures.json` | Drawn on the map with distance and walking time. |
-| Phone numbers | 999, 991 (Civil Defence), NADMA 03-8064 2400 | Shown under "Who to contact". |
+| What                             | Source                                                                                                                   | How it is used                                                                                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Weather warnings                 | MET Malaysia, through `https://api.data.gov.my/weather/warning/` (no key, free)                                          | Fetched on the server (`server/src/live/met.ts`), shown in **News** under "Official weather warnings", each with its issue time, labelled _Official_. New ones raise a notification. |
+| Streets and buildings on the map | OpenStreetMap contributors, served by OpenFreeMap                                                                        | The 3D basemap.                                                                                                                                                                      |
+| Place names                      | Real places in Bandar Sunway, Shah Alam, Subang Jaya and Klang                                                           | Demo locations and safe zones are named after them.                                                                                                                                  |
+| Walking routes                   | OpenStreetMap road network (ODbL), computed once with the OSRM foot profile and stored in `contracts/demo-fixtures.json` | Drawn on the map with distance and walking time.                                                                                                                                     |
+| Phone numbers                    | 999, 991 (Civil Defence), NADMA 03-8064 2400                                                                             | Shown under "Who to contact".                                                                                                                                                        |
 
 ## Simulated
 
@@ -25,7 +25,7 @@ Every flood, every zone outline and damage level, every safe zone's status, ever
 
 ## Honest limits for a pitch
 
-MET Malaysia's warnings are regional weather warnings (thunderstorms, continuous rain, strong winds). They are not a flood alert for a street. The claim that is true: *a simulated flood scenario with a real, live official weather-warning feed and real map data.*
+MET Malaysia's warnings are regional weather warnings (thunderstorms, continuous rain, strong winds). They are not a flood alert for a street. The claim that is true: _a simulated flood scenario with a real, live official weather-warning feed and real map data._
 
 ## Sources checked and not used
 

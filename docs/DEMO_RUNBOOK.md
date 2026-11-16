@@ -11,29 +11,29 @@ Every step below is run automatically by `node tools/e2e.mjs`, which also retake
 
 ## The run
 
-| Say | Do |
-|---|---|
-| "A flood app usually shows you a map of everything. If you are standing in rising water, you need three things: am I in danger, what do I do, where do I go." | Tab A: the lock screen (screenshot 01). |
-| "FLARE knows where the phone is. It is inside a flood zone, so it alerts the person." | Tap the **EMERGENCY FLOOD** alert. |
-| "It does not open a dashboard. It opens a guide: what to do now, call 999, and the nearest safe zone with a walking time." | The emergency guide (02). Scroll once to the safe zones. |
-| "The map is 3D. Red, orange and amber are damage levels. Green is a safe zone, and that is the walking route on real roads." | Tap **Map** (03). Tap a different time pill to switch safe zone. |
-| "News is separate and readable. Official warnings are live from MET Malaysia. Scenario updates are labelled simulated." | Tap **News** (04). |
-| "If they cannot leave, they ask for help in three taps. No typing." | Tap **Get help**, pick *Trapped*, set people to 3, **Send request** (05). Read out the ID. |
-| "The responder has it already." | Tab B: the same ID is in the queue and on the map (06). Click it, then **Send Rescue Team Alpha**. |
-| "And the person knows help is coming, within a second." | Tab A: *Team on the way*, with a notification (07). |
-| "This switch is outside the phone because it is not part of the app. It lets you move the person." | Tab A, top bar: set **Citizen is at** to *Sunway Pyramid*. The app goes calm (08). Set it back to *Monash University*: the alert returns. |
+| Say                                                                                                                                                           | Do                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| "A flood app usually shows you a map of everything. If you are standing in rising water, you need three things: am I in danger, what do I do, where do I go." | Tab A: the lock screen (screenshot 01).                                                                                                   |
+| "FLARE knows where the phone is. It is inside a flood zone, so it alerts the person."                                                                         | Tap the **EMERGENCY FLOOD** alert.                                                                                                        |
+| "It does not open a dashboard. It opens a guide: what to do now, call 999, and the nearest safe zone with a walking time."                                    | The emergency guide (02). Scroll once to the safe zones.                                                                                  |
+| "The map is 3D. Red, orange and amber are damage levels. Green is a safe zone, and that is the walking route on real roads."                                  | Tap **Map** (03). Tap a different time pill to switch safe zone.                                                                          |
+| "News is separate and readable. Official warnings are live from MET Malaysia. Scenario updates are labelled simulated."                                       | Tap **News** (04).                                                                                                                        |
+| "If they cannot leave, they ask for help in three taps. No typing."                                                                                           | Tap **Get help**, pick _Trapped_, set people to 3, **Send request** (05). Read out the ID.                                                |
+| "The responder has it already."                                                                                                                               | Tab B: the same ID is in the queue and on the map (06). Click it, then **Send Rescue Team Alpha**.                                        |
+| "And the person knows help is coming, within a second."                                                                                                       | Tab A: _Team on the way_, with a notification (07).                                                                                       |
+| "This switch is outside the phone because it is not part of the app. It lets you move the person."                                                            | Tab A, top bar: set **Citizen is at** to _Sunway Pyramid_. The app goes calm (08). Set it back to _Monash University_: the alert returns. |
 
 Close with: "FLARE tells you what to do next, and shows you that someone is coming."
 
 ## If something goes wrong
 
-| Problem | Do this |
-|---|---|
-| The map is blank or slow | Carry on. The guide, safe zones and walking times do not need it. Say "the map needs the venue network". |
-| The page says the server is not running | Restart `npm start`, reload the tab. |
-| Old requests in the queue | Press **Reset**. |
-| No official warnings in News | The MET Malaysia feed is unreachable or has nothing in force. The simulated updates still show. Do not claim live data on stage unless you can see an item labelled *Official*. |
-| Everything is down | Show `docs/screenshots/` in order, 01 to 09. |
+| Problem                                 | Do this                                                                                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The map is blank or slow                | Carry on. The guide, safe zones and walking times do not need it. Say "the map needs the venue network".                                                                        |
+| The page says the server is not running | Restart `npm start`, reload the tab.                                                                                                                                            |
+| Old requests in the queue               | Press **Reset**.                                                                                                                                                                |
+| No official warnings in News            | The MET Malaysia feed is unreachable or has nothing in force. The simulated updates still show. Do not claim live data on stage unless you can see an item labelled _Official_. |
+| Everything is down                      | Show `docs/screenshots/` in order, 01 to 09.                                                                                                                                    |
 
 ## Questions you may get
 
