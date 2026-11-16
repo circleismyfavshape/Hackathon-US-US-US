@@ -43,12 +43,16 @@ The design follows that question. Immediate guidance comes first. The map, news 
 
 1. **Open the alert.** The selected location is checked against the illustrated flood polygons. The worst overlapping level determines the guidance.
 2. **Read the guide.** See immediate actions, emergency contacts and nearby relief or medical points. Outside the marked zones, the screen switches to preparedness information.
-3. **Understand the surroundings.** The 3D map shows streets and buildings, severity contours, walking paths, closed roads, police roadblocks, rescue staging and aid points. Tap a marker for details or change the visible layers.
-4. **Ask for help.** Choose the need and number of people. Additional details are optional. Follow the request from **Waiting** to **Team on the way** and **Resolved**.
+3. **Understand the surroundings.** The 3D map shows streets and buildings, severity contours, walking paths, closed roads, police roadblocks, rescue staging and aid points. Tap a marker for details or change the visible layers. Directions opened from the guide start in a flat 2D view, which is easier to follow; the 2D/3D button switches at any time, and **Hide info** clears the legend, route card and service labels off the map.
+4. **Follow the news.** Each section lists the newest update first. The single most recent item is marked **Latest** and named in a strip at the top; items that arrived since the last visit are marked **New**.
+5. **Ask for help.** Choose the need and number of people. Additional details are optional. Follow the request from **Waiting** to **Team on the way** and **Resolved**.
+6. **Say who you are.** The **Profile** tab holds an avatar, name, age, ID number, medical notes, how to recognise the person and an emergency contact. It is sent with a request unless sharing is switched off on the request form.
+
+Notifications can be cleared by swiping them away on the phone, or with the close button on a wide screen.
 
 ### A responder needs the same picture
 
-The console puts requests in a shared queue and on the map. Selecting one brings its location, need, number of people and note together. The responder can send a team, change the assignment, return it to the queue or resolve it. Both views receive updates through the same server-sent event stream.
+The console puts requests in a shared queue and on the map. Selecting one brings its location, need, number of people and note together, with the sender's profile when they shared it, so the team knows who to look for. The responder can send a team, change the assignment, return it to the queue or resolve it. Both views receive updates through the same server-sent event stream.
 
 | Updates and weather                                                                                    | The citizen sees progress                                                                | The responder coordinates                                                             |
 | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -203,12 +207,12 @@ Operational use would require verified flood and closure feeds, validated destin
 
 Contributions overlapped across the project; these are the main areas each member worked on.
 
-| Member                                          | Contribution                                                                                                                                   |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Khaled Morshed](https://github.com/jeffyoh312) | Team lead and full-stack development across the project, including integration, UI/UX, responder workflows, scenario improvements and testing. |
-| [Sajid Anas](https://github.com/69sxjid)             | Backend lead, application foundation, API contracts, integration and shared UI.                                                                |
+| Member                                                   | Contribution                                                                                                                                   |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Khaled Morshed](https://github.com/jeffyoh312)          | Team lead and full-stack development across the project, including integration, UI/UX, responder workflows, scenario improvements and testing. |
+| [Sajid Anas](https://github.com/69sxjid)                 | Backend lead, application foundation, API contracts, integration and shared UI.                                                                |
 | [Mohammed Awais](https://github.com/Vais1)               | Frontend lead, Citizen experience, maps, location and DF checks, live weather data and documentation.                                          |
-| [Ahmed Sayedgotb](https://github.com/circleismyfavshape)  | Full-stack support, Logo, branding, stratagy and early resource-allocation work.                                                               |
+| [Ahmed Sayedgotb](https://github.com/circleismyfavshape) | Full-stack support, Logo, branding, stratagy and early resource-allocation work.                                                               |
 
 ## License
 
