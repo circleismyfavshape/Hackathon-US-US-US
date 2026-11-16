@@ -1,6 +1,7 @@
 {
   "name": "flare",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "description": "FLARE: location-based flood guidance and response coordination with an illustrated scenario and live weather warnings",
   "workspaces": [

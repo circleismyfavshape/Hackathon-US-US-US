@@ -7,14 +7,34 @@ export const MAX_SOS = 500;
 
 type Listener = (event: LiveEvent) => void;
 
+export type DemoSnapshot = { startedAt: number; requests: Sos[] };
+
 export class DemoStore {
   fixtures: DemoFixtures;
   private sos = new Map<string, Sos>();
   private listeners = new Set<Listener>();
   startedAt = Date.now();
 
-  constructor() {
+  constructor(snapshot?: DemoSnapshot) {
+    if (snapshot) {
+      if (
+        !Number.isFinite(snapshot.startedAt) ||
+        !Array.isArray(snapshot.requests) ||
+        snapshot.requests.length > MAX_SOS
+      ) {
+        throw new Error('Invalid stored demo state');
+      }
+      this.startedAt = snapshot.startedAt;
+      this.sos = new Map(
+        structuredClone(snapshot.requests).map((request) => [request.id, request]),
+      );
+    }
     this.fixtures = loadFixtures(this.startedAt);
+  }
+
+  /** A portable copy for hosted storage; local development continues to use memory. */
+  snapshot(): DemoSnapshot {
+    return { startedAt: this.startedAt, requests: structuredClone([...this.sos.values()]) };
   }
 
   /** Subscribe to changes. Returns the unsubscribe function. */

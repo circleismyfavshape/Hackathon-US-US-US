@@ -100,7 +100,7 @@ export function createApp(
 
   app.post('/api/sos', async (c) => {
     const v = validateSosCreate(await readJson(c), store.fixtures);
-    if (!v.ok) {
+    if (v.ok === false) {
       return bad(c, 400, 'invalid SOS', v.details);
     }
     try {
@@ -120,7 +120,7 @@ export function createApp(
 
   app.patch('/api/sos/:id', async (c) => {
     const v = validateSosPatch(await readJson(c));
-    if (!v.ok) {
+    if (v.ok === false) {
       return bad(c, 400, 'invalid SOS update', v.details);
     }
     const s = store.patchSos(c.req.param('id'), v.value);

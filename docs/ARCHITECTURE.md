@@ -1,6 +1,6 @@
 # Architecture and maintenance
 
-FLARE is a React client and a single Hono server, joined by shared TypeScript types and one scenario fixture. It has no database or external dispatch integration.
+FLARE is a React client and a Hono API, joined by shared TypeScript types and one scenario fixture. Local development uses one Node process. The Vercel deployment shares requests through Redis. Neither mode integrates with external dispatch services.
 
 The API client checks the core scenario response before rendering. Operational map fields added in v2.1 default to empty arrays when an older API process is still running, so either main view remains usable during an update. Restart the server to load the current scenario and its newer layers.
 
@@ -13,7 +13,7 @@ The API client checks the core scenario response before rendering. Operational m
 5. Hooks in `flare/data.ts` refetch the queue or feed. The citizen's request hook refreshes its specific record.
 6. A responder patches the status through the same API, repeating the notification cycle.
 
-The store caps requests at 500. Restarting the process or resetting the scenario clears them. Authentication and persistent storage are future work.
+The store caps requests at 500. Local requests clear on process restart or reset. Hosted requests survive function restarts and clear when the shared scenario is reset. Authentication is future work.
 
 ## Source map
 
@@ -55,4 +55,6 @@ The fixture is checked for valid incident references, closed contours, represent
 
 `npm start` builds the client and serves it with the API. The client build is resolved relative to the server module; assets are served from `client/dist`. Vite is only needed for development. `PORT` changes the production server port; the development proxy defaults to `8787`.
 
-The current model assumes one server process. Multiple processes would need shared storage and event delivery. Before any operational deployment, requests also need authentication, access controls, retention policies and validated incident data.
+On Vercel, `api/index.ts` adapts Node requests to `server/src/hosting/app.ts`. Each request reads the shared snapshot, runs the same local validation and API handlers, then commits successful mutations with an atomic comparison. A conflicting mutation retries against the latest state. Redis pub/sub relays changes to browser streams across function instances. Preview state is separate from production. See [DEPLOYMENT.md](DEPLOYMENT.md) for configuration and free-tier limits.
+
+Before any operational deployment, requests also need authentication, access controls, retention policies and validated incident data.

@@ -13,6 +13,8 @@ import { chromium } from 'playwright';
 
 const base = process.env.FLARE_TEST_URL ?? 'http://localhost:8793';
 const shots = resolve(process.env.FLARE_SCREENSHOTS_DIR ?? 'docs/screenshots');
+// Local regressions keep a one-second deadline; hosted checks allow for network round trips.
+const liveTimeout = Number(process.env.FLARE_E2E_SYNC_TIMEOUT ?? 1000);
 
 const steps = [];
 const step = async (name, fn) => {
@@ -131,29 +133,26 @@ try {
     assert.match(await item.innerText(), /Monash University/);
   });
 
-  await step(
-    'a second request reaches the open console in under a second, with a notification',
-    async () => {
-      const t = Date.now();
-      await fetch(`${base}/api/sos`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          incidentId: 'INC-DEMO-004',
-          people: 2,
-          type: 'medical-help',
-          description: 'Elderly man needs his medicine',
-          location: { lat: 3.0624, lng: 101.6058 },
-          locationMode: 'manual-demo',
-        }),
-      });
-      await ops.getByTestId('queue-item').nth(1).waitFor({ timeout: 1000 });
-      assert.ok(Date.now() - t < 1000);
-      assert.match(await ops.locator('.fl-toast').first().innerText(), /New request · Medical/);
-    },
-  );
+  await step('a second request reaches the open console with a live notification', async () => {
+    const t = Date.now();
+    await fetch(`${base}/api/sos`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        incidentId: 'INC-DEMO-004',
+        people: 2,
+        type: 'medical-help',
+        description: 'Elderly man needs his medicine',
+        location: { lat: 3.0624, lng: 101.6058 },
+        locationMode: 'manual-demo',
+      }),
+    });
+    await ops.getByTestId('queue-item').nth(1).waitFor({ timeout: liveTimeout });
+    assert.ok(Date.now() - t < 1000);
+    assert.match(await ops.locator('.fl-toast').first().innerText(), /New request · Medical/);
+  });
 
-  await step('sending a team updates the citizen within a second', async () => {
+  await step('sending a team updates the citizen through the live stream', async () => {
     await ops.getByTestId('queue-item').filter({ hasText: sosId }).click();
     assert.equal(await ops.getByTestId('detail-id').innerText(), sosId);
     // A failed assignment must show an error and leave the controls available for a retry.
@@ -177,17 +176,17 @@ try {
     await ops.getByTestId('assign').click();
     await app
       .locator('[data-testid="sos-headline"]', { hasText: 'Team on the way' })
-      .waitFor({ timeout: 1000 });
+      .waitFor({ timeout: liveTimeout });
     assert.match(await app.locator('.fl-toast').first().innerText(), /Help is on the way/);
     await settle(page, 600);
     await page.screenshot({ path: `${shots}/07-phone-team-on-the-way.png` });
   });
 
-  await step('resolving it updates the citizen within a second', async () => {
+  await step('resolving it updates the citizen through the live stream', async () => {
     await ops.getByTestId('resolve').click();
     await app
       .locator('[data-testid="sos-headline"]', { hasText: 'Resolved' })
-      .waitFor({ timeout: 1000 });
+      .waitFor({ timeout: liveTimeout });
   });
 
   await step(
