@@ -145,6 +145,58 @@ describe('tidy', () => {
 });
 
 describe('createMetAlerts', () => {
+  test('drops a cached warning at its expiry even before the cache TTL ends', async () => {
+    let time = NOW;
+    let calls = 0;
+    const warning = real('2026-11-16T09:00:00', 'Rain Warning', 'Selangor', '2026-11-16T10:00:01');
+    const get = createMetAlerts({
+      now: () => time,
+      ttlMs: 60_000,
+      fetchImpl: (async () => {
+        calls++;
+        return respond([warning]);
+      }) as typeof fetch,
+    });
+    assert.equal((await get()).length, 1);
+    time += 1000;
+    assert.deepEqual(await get(), []);
+    assert.equal(calls, 1);
+  });
+
+  test('an outage never revives an expired warning from the last good response', async () => {
+    let time = NOW;
+    let fail = false;
+    const warning = real('2026-11-16T09:00:00', 'Rain Warning', 'Selangor', '2026-11-16T10:00:01');
+    const get = createMetAlerts({
+      now: () => time,
+      ttlMs: 500,
+      fetchImpl: (async () => {
+        if (fail) {
+          throw new Error('offline');
+        }
+        return respond([warning]);
+      }) as typeof fetch,
+    });
+    assert.equal((await get()).length, 1);
+    fail = true;
+    time += 1000;
+    assert.deepEqual(await get(), []);
+  });
+
+  test('an unexpected response preserves still-valid cached warnings', async () => {
+    let time = NOW;
+    let malformed = false;
+    const get = createMetAlerts({
+      now: () => time,
+      ttlMs: 100,
+      fetchImpl: (async () =>
+        respond(malformed ? { error: 'unavailable' } : SAMPLE)) as typeof fetch,
+    });
+    const first = await get();
+    malformed = true;
+    time += 101;
+    assert.deepEqual(await get(), first);
+  });
   test('caches a good response, then refetches after the ttl', async () => {
     let calls = 0;
     let t = NOW;

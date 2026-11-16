@@ -61,32 +61,40 @@ export function createApp(
         wake?.();
       });
       let open = true;
-      stream.onAbort(() => {
+      const stop = () => {
+        if (!open) {
+          return;
+        }
         open = false;
         off();
         wake?.();
-      });
-      await stream.writeSSE({ event: 'ready', data: '{}' });
-      while (open) {
-        const next = queue.shift();
-        if (next) {
-          await stream.writeSSE({ event: 'change', data: JSON.stringify(next) });
-          continue;
+      };
+      stream.onAbort(stop);
+      try {
+        await stream.writeSSE({ event: 'ready', data: '{}' });
+        while (open) {
+          const next = queue.shift();
+          if (next) {
+            await stream.writeSSE({ event: 'change', data: JSON.stringify(next) });
+            continue;
+          }
+          // Wait for a change, then send a ping after 20 seconds of silence to keep proxies connected.
+          const timedOut = await new Promise<boolean>((resolve) => {
+            const t = setTimeout(() => resolve(true), 20_000);
+            wake = () => {
+              clearTimeout(t);
+              resolve(false);
+            };
+          });
+          wake = null;
+          if (timedOut && open) {
+            await stream.writeSSE({ event: 'ping', data: '{}' });
+          }
         }
-        // Wait for the next change, or 20 s, then send a comment line so proxies keep the stream open.
-        const timedOut = await new Promise<boolean>((resolve) => {
-          const t = setTimeout(() => resolve(true), 20_000);
-          wake = () => {
-            clearTimeout(t);
-            resolve(false);
-          };
-        });
-        wake = null;
-        if (timedOut && open) {
-          await stream.writeSSE({ event: 'ping', data: '{}' });
-        }
+      } finally {
+        // Also release the subscription if writing to the stream fails before an abort arrives.
+        stop();
       }
-      off();
     });
   });
 
