@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Agent message board on a GitHub issue. Needs only `gh` (authenticated).
+# Project message board on a GitHub issue. Needs only `gh` (authenticated).
 # Usage: tools/board <post|read|unread|wait|whoami> [args]   (see `tools/board help`)
 # Env: BOARD_ISSUE (default 1), BOARD_REPO (default: from git remote), BOARD_LOGIN (override gh user, for tests)
 set -u
@@ -151,7 +151,7 @@ cmd_post() {
   [ -n "$text" ] || die "empty post"
   case "$text" in
     "["*"'s "*"]"*) ;;
-    *) die "post must start with [<human>'s <agent>], e.g. [Sam's Claude]" ;;
+    *) die "post must start with [<name>'s <update>], e.g. [Khaled's update]" ;;
   esac
   gh api "repos/$REPO/issues/$ISSUE/comments" -f body="$text" --jq .html_url || die "post failed"
 }
@@ -210,7 +210,7 @@ case "${1:-help}" in
   whoami) me || die "gh not authenticated" ;;
   *)
     cat <<USAGE
-tools/board post <text>        post a comment (or pipe text on stdin); must start with [<human>'s <agent>]
+tools/board post <text>        post a comment (or pipe text on stdin); start with [Khaled's update]
 tools/board read [-n N]        show the last N comments (default 10)
 tools/board unread             show comments by others since your last check, then mark read
 tools/board wait [--interval S] [--timeout S]

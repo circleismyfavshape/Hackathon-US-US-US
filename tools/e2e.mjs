@@ -3,19 +3,16 @@
 //   npm run build && PORT=8793 npm start -w server      (in one terminal)
 //   node tools/e2e.mjs                                   (in another)
 //
-// Playwright is not a project dependency. Point FLARE_BROWSER_TOOLS at any folder that has it installed
-// (default: .board/browser-tools). FLARE_TEST_URL overrides the server address. The script resets the demo first.
+// Install the browser once with: npx playwright install chromium
+// FLARE_TEST_URL overrides the server address; FLARE_SCREENSHOTS_DIR overrides the screenshot folder.
+// The script resets the scenario before and after the run. Use a dedicated local test server.
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { chromium } from 'playwright';
 
 const base = process.env.FLARE_TEST_URL ?? 'http://localhost:8793';
-const shots = resolve('docs/screenshots');
-const requireBrowser = createRequire(
-  resolve(process.env.FLARE_BROWSER_TOOLS ?? '.board/browser-tools', 'package.json'),
-);
-const { chromium } = requireBrowser('playwright');
+const shots = resolve(process.env.FLARE_SCREENSHOTS_DIR ?? 'docs/screenshots');
 
 const steps = [];
 const step = async (name, fn) => {
@@ -32,9 +29,13 @@ await fetch(`${base}/api/demo/reset`, { method: 'POST' });
 
 const browser = await chromium.launch({ headless: true });
 const errors = [];
+const expectedDispatchErrors = new WeakSet();
 const watch = (page, label) => {
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
   page.on('console', (m) => {
+    if (expectedDispatchErrors.has(page) && /503/.test(m.text())) {
+      return;
+    }
     if (m.type() === 'error' && !/favicon|tiles\.openfreemap|net::ERR/.test(m.text())) {
       errors.push(`${label}: ${m.text()}`);
     }
@@ -51,6 +52,7 @@ try {
     await page.goto(base);
     const alert = page.getByTestId('lock-alert');
     await alert.waitFor();
+    await alert.getByText(/severe flood zone at Sunway–Monash/).waitFor();
     assert.match(await alert.innerText(), /EMERGENCY FLOOD/);
     assert.match(await alert.innerText(), /severe flood zone at Sunway–Monash/);
     await settle(page, 1500);
@@ -62,6 +64,7 @@ try {
     await page.waitForURL(`${base}/phone/citizen`);
     app = page.frameLocator('iframe');
     await app.locator('.fl-hero[data-tone="severe"]').waitFor();
+    await page.getByTestId('phone-feature-note').getByText('Know what to do first').waitFor();
     assert.match(await app.locator('.fl-hero h1').innerText(), /inside a flood danger zone/);
     assert.equal(await app.locator('.fl-steps li').count(), 4);
     assert.match(await app.locator('.fl-row[data-on]').innerText(), /Sunway University/);
@@ -75,6 +78,10 @@ try {
   await step('the map tab shows the 3D map with the route to the safe zone', async () => {
     await app.locator('.fl-tabbar button', { hasText: 'Map' }).click();
     await app.locator('.fl-mapcard').waitFor();
+    await page
+      .getByTestId('phone-feature-note')
+      .getByText('Read the situation around you')
+      .waitFor();
     assert.match(await app.locator('.fl-mapcard').innerText(), /min walk/);
     await app.locator('.fl-you').waitFor();
     await settle(page, 7000);
@@ -84,6 +91,10 @@ try {
   await step('news separates simulated updates from official warnings', async () => {
     await app.locator('.fl-tabbar button', { hasText: 'News' }).click();
     await app.locator('.fl-news').first().waitFor();
+    await page
+      .getByTestId('phone-feature-note')
+      .getByText('Follow the changing situation')
+      .waitFor();
     const text = await app.locator('.fl-scroll').innerText();
     assert.match(text, /Near you/);
     assert.match(text, /Official weather warnings/);
@@ -95,6 +106,10 @@ try {
   let sosId;
   await step('a request is sent from the phone', async () => {
     await app.locator('.fl-tabbar button', { hasText: 'Get help' }).click();
+    await page
+      .getByTestId('phone-feature-note')
+      .getByText('Ask for help and follow its progress')
+      .waitFor();
     await app.getByRole('button', { name: 'One more' }).click();
     await app.getByRole('button', { name: 'One more' }).click();
     assert.equal(await app.getByTestId('people').innerText(), '3');
@@ -141,6 +156,22 @@ try {
   await step('sending a team updates the citizen within a second', async () => {
     await ops.getByTestId('queue-item').filter({ hasText: sosId }).click();
     assert.equal(await ops.getByTestId('detail-id').innerText(), sosId);
+    // A failed assignment must show an error and leave the controls available for a retry.
+    expectedDispatchErrors.add(ops);
+    await ops.route('**/api/sos/*', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({
+            status: 503,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'Temporary dispatch failure' }),
+          })
+        : route.continue(),
+    );
+    await ops.getByTestId('assign').click();
+    await ops.getByRole('alert').filter({ hasText: 'Temporary dispatch failure' }).waitFor();
+    assert.equal(await ops.getByTestId('assign').isEnabled(), true);
+    await ops.unroute('**/api/sos/*');
+    expectedDispatchErrors.delete(ops);
     await settle(ops, 7000);
     await ops.screenshot({ path: `${shots}/06-responder-console.png` });
     await ops.getByTestId('assign').click();
@@ -167,6 +198,9 @@ try {
       assert.match(await app.locator('.fl-hero h1').innerText(), /outside the marked flood zones/);
       await settle(page, 800);
       await page.screenshot({ path: `${shots}/08-phone-outside-zones.png` });
+      await app.locator('.fl-tabbar button', { hasText: 'Get help' }).click();
+      assert.match(await app.locator('.fl-facts').innerText(), /Monash University/);
+      assert.doesNotMatch(await app.locator('.fl-facts').innerText(), /Sunway Pyramid/);
       await page.locator('#fl-loc').selectOption('L9');
       await app.locator('.fl-hero[data-tone="high"]').waitFor();
       assert.match(await app.locator('.fl-toast').first().innerText(), /EMERGENCY FLOOD/);
@@ -183,6 +217,56 @@ try {
     await settle(page, 7000);
     await page.screenshot({ path: `${shots}/09-citizen-desktop.png` });
   });
+
+  await step('all four areas have detailed zones, relief points and map layers', async () => {
+    for (const [place, area, screenshot] of [
+      ['L7', 'Sunway', null],
+      ['L1', 'Shah Alam', '10-shah-alam.png'],
+      ['L4', 'Subang Jaya', '11-subang-jaya.png'],
+      ['L6', 'Klang', '12-klang.png'],
+    ]) {
+      await page.locator('#fl-loc').selectOption(place);
+      await page.locator('.fl-hero[data-tone="severe"]').waitFor();
+      await page.locator('.fl-service-pin').nth(3).waitFor();
+      assert.equal(await page.locator('.fl-service-pin').count(), 4, area);
+      assert.equal(await page.locator('.fl-closure-pin').count(), 2, area);
+      assert.equal(await page.locator('.fl-pin-safe').count(), 3, area);
+      await page.locator('.fl-map-layers summary').click();
+      const services = page.getByRole('checkbox', { name: 'Police, fire and aid' });
+      await services.uncheck();
+      assert.equal(await page.locator('.fl-service-pin').count(), 0);
+      await services.check();
+      const closures = page.getByRole('checkbox', { name: 'Roadblocks and closures' });
+      await closures.uncheck();
+      assert.equal(await page.locator('.fl-closure-pin').count(), 0);
+      await closures.check();
+      await page.locator('.fl-map-layers summary').click();
+      if (screenshot) {
+        await page.locator('.fl-toast').last().waitFor({ state: 'hidden', timeout: 20_000 });
+        await settle(page, 1800);
+        await page.screenshot({ path: `${shots}/${screenshot}` });
+      }
+    }
+    await page.locator('#fl-loc').selectOption('L7');
+  });
+
+  await step(
+    'operational markers and closures explain their simulation status on keyboard activation',
+    async () => {
+      const marker = page.locator('.fl-service-pin').first();
+      await marker.focus();
+      await marker.press('Enter');
+      await page.getByText('Illustrated response post; availability is not verified.').waitFor();
+      await page.getByRole('button', { name: 'Close popup' }).click();
+      const closure = page.locator('.fl-closure-pin').first();
+      await closure.focus();
+      await closure.press('Enter');
+      await page
+        .getByText('Illustrated segment. Stored routes do not avoid this closure.')
+        .waitFor();
+      await page.getByRole('button', { name: 'Close popup' }).click();
+    },
+  );
 
   await step('switching role and device forty times never breaks a view', async () => {
     const order = [
@@ -258,6 +342,43 @@ try {
     await phone.close();
   });
 
+  await step('the responder phone notes follow request selection', async () => {
+    const preview = await ctx.newPage();
+    watch(preview, 'responder phone');
+    await preview.goto(`${base}/phone/responder`);
+    const note = preview.getByTestId('phone-feature-note');
+    await note.getByText('See who needs help').waitFor();
+    const responder = preview.frameLocator('iframe');
+    await responder.getByTestId('queue-item').first().click();
+    await note.getByText('Coordinate a response').waitFor();
+    await responder.locator('.fl-detail-back').click();
+    await note.getByText('See who needs help').waitFor();
+    await preview.close();
+  });
+
+  await step('a first-load API failure offers a working retry', async () => {
+    const offline = await ctx.newPage();
+    watch(offline, 'connection failure');
+    await offline.route('**/api/scenario', (route) => route.abort('failed'));
+    await offline.goto(`${base}/citizen`);
+    await offline.getByRole('alert').filter({ hasText: 'Could not load' }).waitFor();
+    await offline.unroute('**/api/scenario');
+    await offline.getByRole('button', { name: 'Try again' }).click();
+    await offline.locator('.fl-hero').waitFor();
+    await offline.close();
+  });
+
+  await step('the scenario map works when the basemap service is unavailable', async () => {
+    const blank = await ctx.newPage();
+    watch(blank, 'offline basemap');
+    await blank.route('https://tiles.openfreemap.org/**', (route) => route.abort('failed'));
+    await blank.goto(`${base}/citizen`);
+    await blank.locator('.fl-map canvas').waitFor();
+    await blank.locator('.fl-service-pin').nth(3).waitFor();
+    assert.equal(await blank.locator('.fl-closure-pin').count(), 2);
+    await blank.close();
+  });
+
   await step('old links land on the front door', async () => {
     await page.goto(`${base}/recovery`);
     await page.getByTestId('lock-alert').waitFor();
@@ -265,7 +386,7 @@ try {
   });
 
   assert.deepEqual(errors, [], 'browser errors');
-  console.log(`\nAll ${steps.length} steps passed. Screenshots are in docs/screenshots.`);
+  console.log(`\nAll ${steps.length} steps passed. Screenshots are in ${shots}.`);
 } finally {
   await browser.close();
   await fetch(`${base}/api/demo/reset`, { method: 'POST' }).catch(() => {});

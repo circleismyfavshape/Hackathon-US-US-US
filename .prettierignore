@@ -2,9 +2,6 @@ node_modules/
 dist/
 .board/
 .git/
-.claude/
 .github/
 AGENTS.md
-CLAUDE.md
-docs/process/
 package-lock.json

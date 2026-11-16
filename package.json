@@ -2,7 +2,7 @@
   "name": "flare",
   "private": true,
   "version": "0.1.0",
-  "description": "FLARE: flood alerts that know where you are (hackathon demo, simulated scenario)",
+  "description": "FLARE: location-based flood guidance and response coordination with an illustrated scenario and live weather warnings",
   "workspaces": [
     "client",
     "server"
@@ -21,9 +21,11 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "playwright": "1.65.1",
     "prettier": "3.10.1"
   },
   "engines": {
     "node": ">=20.19"
-  }
+  },
+  "license": "MIT"
 }

@@ -1,4 +1,4 @@
-// OWNER: D2
+// Application entry point. StrictMode also exercises effect cleanup during development.
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
