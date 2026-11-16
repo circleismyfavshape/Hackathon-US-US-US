@@ -21,16 +21,24 @@ if (existsSync(distDir)) {
   app.use('/assets/*', serveStatic({ root: distDir }));
   app.get('/favicon.svg', serveStatic({ root: distDir }));
   app.get('*', (c) => {
-    if (c.req.path.startsWith('/api/')) return c.notFound();
+    if (c.req.path.startsWith('/api/')) {
+      return c.notFound();
+    }
     c.header('cache-control', 'no-store');
     return c.html(readFileSync(`${distDir}index.html`, 'utf8'));
   });
 }
 
 const server = serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`FLARE on http://localhost:${info.port} (simulated scenario${live ? ', official MET Malaysia warnings on' : ''}; not an emergency service)`);
+  console.log(
+    `FLARE on http://localhost:${info.port} (simulated scenario${live ? ', official MET Malaysia warnings on' : ''}; not an emergency service)`,
+  );
 });
 server.on('error', (e: NodeJS.ErrnoException) => {
-  console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Stop the other FLARE server, or set PORT to another number.` : e);
+  console.error(
+    e.code === 'EADDRINUSE'
+      ? `Port ${PORT} is already in use. Stop the other FLARE server, or set PORT to another number.`
+      : e,
+  );
   process.exit(1);
 });
