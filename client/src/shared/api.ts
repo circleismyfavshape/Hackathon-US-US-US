@@ -1,27 +1,8 @@
-// OWNER: D2. Typed client for the frozen FLARE API (contracts/API_CONTRACT.md).
-// D1/D3: call these instead of fetch() directly so shapes stay in sync.
-import type {
-  AiExplanation,
-  Alert,
-  ApiError,
-  ComparisonResult,
-  Incident,
-  LatLng,
-  RecoverySnapshot,
-  Shelter,
-  Sos,
-  SosCreate,
-  SosPatch,
-  Strategy,
-} from '../../../contracts/types.ts';
+// Typed client for the FLARE API (contracts/API_CONTRACT.md). Call these instead of fetch() so shapes stay in sync.
+import type { Alert, ApiError, LiveEvent, Scenario, Sos, SosCreate, SosPatch } from '../../../contracts/types.ts';
 
 export type * from '../../../contracts/types.ts';
-
-export type DemoConfig = {
-  demoLocations: { id: string; incidentId?: string; label: string; location: LatLng }[];
-  demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
-  demoTeams: string[];
-};
+export { ZONE_LEVELS } from '../../../contracts/types.ts';
 
 export class ApiRequestError extends Error {
   constructor(
@@ -33,17 +14,22 @@ export class ApiRequestError extends Error {
         ? `${body.error}: ${body.details.join('; ')}`
         : (body?.error ??
             // A 5xx with no JSON body comes from the dev proxy, not from FLARE: the API server on :8787 is not running.
-            (status >= 500 ? 'The FLARE API server is not running. Start it with npm run dev (or npm start).' : `HTTP ${status}`)),
+            (status >= 500 ? 'The FLARE server is not running. Start it with npm run dev (or npm start).' : `HTTP ${status}`)),
     );
   }
 }
 
 async function req<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const r = await fetch(path, {
-    method: init?.method ?? 'GET',
-    headers: init?.body === undefined ? undefined : { 'content-type': 'application/json' },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-  });
+  let r: Response;
+  try {
+    r = await fetch(path, {
+      method: init?.method ?? 'GET',
+      headers: init?.body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+    });
+  } catch {
+    throw new Error('No connection to the FLARE server. Check that it is running, then try again.');
+  }
   const data = await r.json().catch(() => null);
   if (!r.ok) throw new ApiRequestError(r.status, data as ApiError | null);
   return data as T;
@@ -51,35 +37,61 @@ async function req<T>(path: string, init?: { method?: string; body?: unknown }):
 
 export const api = {
   health: () => req<{ status: 'ok'; mode: 'demo' }>('/api/health'),
-  incidents: () => req<Incident[]>('/api/incidents'),
+  scenario: () => req<Scenario>('/api/scenario'),
   alerts: () => req<Alert[]>('/api/alerts'),
-  shelters: () => req<Shelter[]>('/api/shelters'),
-  demoConfig: () => req<DemoConfig>('/api/demo/config'),
   createSos: (body: SosCreate) => req<Sos>('/api/sos', { method: 'POST', body }),
   listSos: () => req<Sos[]>('/api/sos'),
   getSos: (id: string) => req<Sos>(`/api/sos/${encodeURIComponent(id)}`),
   patchSos: (id: string, body: SosPatch) => req<Sos>(`/api/sos/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
-  recovery: () => req<RecoverySnapshot>('/api/recovery'),
-  compare: (strategy: Strategy) => req<ComparisonResult>('/api/recovery/compare', { method: 'POST', body: { strategy } }),
-  /** v1.1: AI-written trade-off summary. Slow (seconds); rejects with 503 when AI is not configured. */
-  explain: () => req<AiExplanation>('/api/recovery/explain', { method: 'POST' }),
   resetDemo: () => req<{ status: 'reset' }>('/api/demo/reset', { method: 'POST' }),
 };
 
-/** Poll `fn` every `ms` (default 2500) until the returned stop() is called. */
-export function poll(fn: () => Promise<void> | void, ms = 2500): () => void {
-  let stopped = false;
-  const tick = async () => {
-    if (stopped) return;
+/* ── Live updates ─────────────────────────────────────────────────────
+   One EventSource per page. The server sends a tiny message whenever requests or the feed change,
+   and every subscriber refetches at once. If the stream cannot be opened, subscribers poll instead. */
+type LiveListener = (type: LiveEvent['type'] | 'resync') => void;
+const listeners = new Set<LiveListener>();
+let source: EventSource | null = null;
+let connected = false;
+
+const tell = (type: Parameters<LiveListener>[0]) => {
+  for (const fn of [...listeners]) fn(type);
+};
+
+function open() {
+  if (source || typeof EventSource === 'undefined') return;
+  const es = new EventSource('/api/events');
+  source = es;
+  es.addEventListener('ready', () => {
+    // First connect, or a reconnect after the server restarted: anything may have changed while we were away.
+    connected = true;
+    tell('resync');
+  });
+  es.addEventListener('change', (e) => {
     try {
-      await fn();
-    } finally {
-      if (!stopped) timer = setTimeout(tick, ms);
+      tell((JSON.parse((e as MessageEvent<string>).data) as LiveEvent).type);
+    } catch {
+      tell('resync');
     }
-  };
-  let timer = setTimeout(tick, 0);
-  return () => {
-    stopped = true;
-    clearTimeout(timer);
+  });
+  es.onerror = () => {
+    // The browser retries by itself. Until it is back, subscribers poll faster.
+    connected = false;
   };
 }
+
+/** Subscribe to server changes. Returns the unsubscribe function. */
+export function onLive(fn: LiveListener): () => void {
+  listeners.add(fn);
+  open();
+  return () => {
+    listeners.delete(fn);
+    if (listeners.size === 0 && source) {
+      source.close();
+      source = null;
+      connected = false;
+    }
+  };
+}
+
+export const liveConnected = () => connected;

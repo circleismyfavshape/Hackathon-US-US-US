@@ -1,50 +1,43 @@
-# FLARE demo runbook (90 seconds)
+# FLARE demo runbook (about two minutes)
 
-Written by Awais, 15 Nov 2026. Every step below was run end to end on main at c4a14c6 (the merge of PR #46, after #39 and #43). Screenshots of each step are in `docs/screenshots/`.
+Every step below is run automatically by `node tools/e2e.mjs`, which also retakes the screenshots in `docs/screenshots/`.
 
-## Before you walk on (2 minutes)
+## Before you walk on
 
-1. `git switch main && git pull && npm install && npm start` (builds the client, serves everything on http://localhost:8787).
-2. Reset to a clean state: `curl -X POST http://localhost:8787/api/demo/reset` (or the Reset button in /responder). The responder queue should read 0 pending.
-3. Open two browser tabs: **A** `http://localhost:8787/citizen` and **B** `http://localhost:8787/responder`. Put them side by side if you can.
-4. **Internet is needed for the map tiles only** (CARTO basemap). Everything else is local. Without it the map still draws the zones and points on a blank canvas.
+1. `git switch main && git pull && npm install && npm start`. This builds the client and serves everything on <http://localhost:8787>.
+2. Open two browser tabs: **A** on `http://localhost:8787/` and **B** on `http://localhost:8787/responder`.
+3. Press **Reset** in the top bar of either tab. The responder queue should be empty.
+4. Internet is needed for the map's streets and buildings and for the official weather warnings. Without it the map still draws zones, pins and routes on a blank canvas, and the news shows the simulated updates only.
 
-## The 90 seconds
+## The run
 
-| Time | Say | Do |
-|---|---|---|
-| 0:00 | "Disaster apps tell people what happened. The alert, the call for help and the relief stock are usually three separate worlds." | Show the landing page (01): a phone lock screen with an EMERGENCY FLOOD notification. Click the notification to open the citizen interface. |
-| 0:10 | "A citizen sees three flood areas, with updates. This is a simulation, labelled on every screen." | Tab A: the overview with 3 areas and the updates feed (02). Click **Shah Alam**. |
-| 0:20 | "They say where they are and what is happening." | Click **L1**, leave type as Trapped, press **More people** twice, type "Three people waiting upstairs, water rising" (03, 04). Press **Send SOS**. A real request ID appears, status Pending, with the line "Simulation: no emergency service receives this" (05). |
-| 0:40 | "On the responder side that exact request is already in the queue." | Tab B: click the same ID in the queue (06). Press **Assign team** (07). |
-| 0:50 | "And the citizen sees it change, with no reload." | Back to tab A: toast "Help is on the way", timeline moves to Team assigned (08). Optionally press **Mark resolved** in tab B and show Resolved in tab A (09). |
-| 1:00 | "Then recovery: three centres need more than the store holds. 280 units short." | Open **Recovery** (10). Click **Proportional**, then **Optimized**. Point at who carries the shortfall. |
-| 1:20 | "FLARE: from the first alert to the last unmet need." | Stop. |
+| Say | Do |
+|---|---|
+| "A flood app usually shows you a map of everything. If you are standing in rising water, you need three things: am I in danger, what do I do, where do I go." | Tab A: the lock screen (screenshot 01). |
+| "FLARE knows where the phone is. It is inside a flood zone, so it alerts the person." | Tap the **EMERGENCY FLOOD** alert. |
+| "It does not open a dashboard. It opens a guide: what to do now, call 999, and the nearest safe zone with a walking time." | The emergency guide (02). Scroll once to the safe zones. |
+| "The map is 3D. Red, orange and amber are damage levels. Green is a safe zone, and that is the walking route on real roads." | Tap **Map** (03). Tap a different time pill to switch safe zone. |
+| "News is separate and readable. Official warnings are live from MET Malaysia. Scenario updates are labelled simulated." | Tap **News** (04). |
+| "If they cannot leave, they ask for help in three taps. No typing." | Tap **Get help**, pick *Trapped*, set people to 3, **Send request** (05). Read out the ID. |
+| "The responder has it already." | Tab B: the same ID is in the queue and on the map (06). Click it, then **Send Rescue Team Alpha**. |
+| "And the person knows help is coming, within a second." | Tab A: *Team on the way*, with a notification (07). |
+| "This switch is outside the phone because it is not part of the app. It lets you move the person." | Tab A, top bar: set **Citizen is at** to *Sunway Pyramid*. The app goes calm (08). Set it back to *Monash University*: the alert returns. |
 
-## If a judge asks
+Close with: "FLARE tells you what to do next, and shows you that someone is coming."
 
-- **Is this real data?** No. It is a labelled simulation: the incidents, zones, shelters and SOS requests are fictional, and no emergency service receives anything. Real deployment would need authoritative feeds, authenticated responders and verified shelter data.
-- **Is there AI?** The numbers come from deterministic code. The optional "Summarise the trade-offs" button only explains the engine's numbers and hides itself when no key is set.
-- **Why does Optimized show 56% under Proportional's 63% in the LOWEST column?** LOWEST is each centre's pooled share. The engine guarantees a minimum per resource, which is 55%: it ties Proportional and beats Equal share (43%) and Priority first (0%). (Ahmed's check, not a bug.)
-- **Is the map live?** The dots and counts update every 2.5 seconds from our own backend. The base map is CARTO/OpenStreetMap tiles. The flood zones are illustrative, not measured.
-
-## If something breaks
+## If something goes wrong
 
 | Problem | Do this |
 |---|---|
-| Map tiles do not load | Carry on. The zones, pins and SOS still work on a blank canvas. |
-| Map says it could not start (no WebGL) | Carry on. The location list and form still work. |
-| Request does not appear in the responder queue | Reload tab B. The queue is the same backend. If still missing, reset and redo. |
-| Page is stale or odd | Reload both tabs. State lives in the server, not the page. |
-| Server restarted | State is reseeded (in memory by design). Reset and start again. |
-| Everything is down | Show the screenshots in `docs/screenshots/` in order 01 to 12. |
+| The map is blank or slow | Carry on. The guide, safe zones and walking times do not need it. Say "the map needs the venue network". |
+| The page says the server is not running | Restart `npm start`, reload the tab. |
+| Old requests in the queue | Press **Reset**. |
+| No official warnings in News | The MET Malaysia feed is unreachable or has nothing in force. The simulated updates still show. Do not claim live data on stage unless you can see an item labelled *Official*. |
+| Everything is down | Show `docs/screenshots/` in order, 01 to 09. |
 
-## What is verified and what is not
+## Questions you may get
 
-Verified end to end on main: typecheck, build, npm test 81/81, and a real two-tab run (create, assign, resolve) with the citizen tab following each step, plus /recovery numbers against the engine (Ahmed), and the 390 px citizen view with no overflow.
-
-Not verified: real browser GPS on a phone, a real touch device, a live AI summary (no key), a device with no WebGL, and the responder on a phone.
-
-Known cosmetic issue: on the citizen overview the "Subang Jaya" chip is partly covered by a relief-centre icon. It does not affect the demo path.
-
-Real public data (MET Malaysia warnings) is NOT in the demo. See `docs/REAL_DATA.md`. Do not claim live data unless it has been merged and tested.
+- **Is the flood real?** No. Floods, zones, safe zones and teams are simulated, and every screen says so. The weather warnings and the road network are real.
+- **How does it know I am in danger?** It tests the location against each zone's outline, worst level first. In the demo the location is one of ten places you pick in the top bar; real GPS can choose the nearest of them and never leaves the browser.
+- **Do the routes avoid flooded roads?** No, and the app says so. They are real walking routes computed in advance. Knowing which roads are passable needs live road data, which is the next step.
+- **How fast are updates?** Under a second. The server pushes a message to every open page when anything changes.

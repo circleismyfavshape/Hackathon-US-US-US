@@ -1,6 +1,5 @@
-// FLARE shared contract types — FROZEN v1.1 (owner: D2 / @69sxjid).
-// Imported with `import type` by both client and server. Do not edit without a
-// versioned D2 change announced on the board. See contracts/API_CONTRACT.md.
+// FLARE shared contract types, v2.0. Imported with `import type` by both client and server.
+// See contracts/API_CONTRACT.md. Change this file and that document together, and post on the board.
 
 export type LatLng = { lat: number; lng: number };
 
@@ -9,36 +8,72 @@ export type Ring = [number, number][];
 
 export type SourceType = 'simulation' | 'official';
 
+/** Damage level of a flood zone, worst first. */
+export const ZONE_LEVELS = ['severe', 'high', 'moderate'] as const;
+export type ZoneLevel = (typeof ZONE_LEVELS)[number];
+
 export type Zone = {
   id: string;
-  level: 'high' | 'moderate';
+  level: ZoneLevel;
+  /** Short name of the level, e.g. "Severe". */
   label: string;
+  /** Plain-words water depth for the level, e.g. "Water above 1 m". */
+  depth: string;
   coordinates: Ring;
 };
 
 export type Incident = {
   id: string;
+  /** "Place · what is happening" */
   title: string;
+  /** Short place name, e.g. "Sunway–Monash". */
+  area: string;
   type: 'flood';
-  severity: 'high' | 'moderate' | 'low';
+  severity: 'severe' | 'high' | 'moderate' | 'low';
   sourceType: SourceType;
   sourceLabel: string;
   sourceUrl: string | null;
   updatedAt: string;
   location: LatLng;
+  summary: string;
   zones: Zone[];
-  guidance: string[];
 };
 
+/** A safe zone: a relief point or a medical point outside every marked zone. */
 export type Shelter = {
   id: string;
   incidentId: string;
   name: string;
+  kind: 'relief' | 'medical';
+  note: string;
   location: LatLng;
   status: 'demo-listed';
   sourceType: SourceType;
   sourceLabel: string;
   sourceUrl: string | null;
+};
+
+export type DemoLocation = { id: string; incidentId: string; label: string; location: LatLng };
+
+/** A walking route on the road network from a demo location to a safe zone. [lng, lat] points.
+ *  It follows real roads but does not know which of them are flooded. */
+export type Route = { id: string; fromLocationId: string; shelterId: string; distanceM: number; minutes: number; coordinates: [number, number][] };
+
+export type Contact = { id: string; label: string; number: string; note: string };
+
+/** What to do, by the level of the zone the person is in. */
+export type Actions = Record<ZoneLevel, string[]>;
+
+export type Scenario = {
+  incidents: Incident[];
+  shelters: Shelter[];
+  demoLocations: DemoLocation[];
+  routes: Route[];
+  actions: Actions;
+  contacts: Contact[];
+  defaultLocationId: string;
+  demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
+  demoTeams: string[];
 };
 
 export const SOS_TYPES = ['trapped', 'medical-help', 'supplies', 'other'] as const;
@@ -58,6 +93,7 @@ export type SosCreate = {
   incidentId: string;
   people: number;
   type: SosType;
+  /** Optional free text, at most 280 characters. May be empty. */
   description: string;
   location: LatLng;
   locationMode: LocationMode;
@@ -76,41 +112,26 @@ export type SosPatch =
   | { status: 'resolved' }
   | { status: 'pending' };
 
-export const RESOURCES = ['water', 'food', 'hygiene'] as const;
-export type Resource = (typeof RESOURCES)[number];
-export type Quantities = Record<Resource, number>;
-
-export type Centre = { id: string; name: string; priority: number; needs: Quantities };
-export type RecoverySnapshot = { centres: Centre[]; inventory: Quantities };
-
-/** v1.1: 'optimized' added (GLPK.js MIP: maximise the guaranteed minimum share, then priority). */
-export const STRATEGIES = ['priority-first', 'proportional', 'equal-share', 'optimized'] as const;
-export type Strategy = (typeof STRATEGIES)[number];
-
-export type CentreAllocation = { centreId: string; allocated: Quantities; unmet: Quantities };
-
-export type ComparisonResult = {
-  strategy: Strategy;
-  allocations: CentreAllocation[];
-  inventoryRemaining: Quantities;
-  totals: { requested: Quantities; allocated: Quantities; unmet: Quantities };
-  explanation: string[];
-  assumptions: string[];
-  status: 'demo-only';
-};
-
-/** v1.1: POST /api/recovery/explain. Text is AI-written from the engine's numbers; the numbers
- *  themselves come only from compareAllocations. */
-export type AiExplanation = {
+/** One item in the news feed. `sourceType` says whether it is a real official warning or part of the simulated scenario. */
+export type Alert = {
+  id: string;
+  /** The simulated incident it belongs to; null for official warnings. */
+  incidentId: string | null;
+  kind: 'flood' | 'shelter' | 'update' | 'weather';
+  title: string;
   text: string;
-  model: string;
-  source: 'ai';
-  basedOn: Strategy[];
-  disclaimer: string;
-  status: 'demo-only';
+  source: string;
+  sourceType: SourceType;
+  /** When it was issued (official) or released (simulated). */
+  at: string;
+  /** Official only: when the warning stops applying. */
+  validTo: string | null;
+  /** Official only: true when the warning names Selangor or the Klang Valley. */
+  local: boolean;
+  url: string | null;
 };
 
-/** v1.2: live update feed. `at` is when the server released it. */
-export type Alert = { id: string; incidentId: string; kind: 'flood' | 'shelter' | 'update'; text: string; source: string; at: string };
+/** Sent on GET /api/events (server-sent events) whenever something changes, so clients refetch at once. */
+export type LiveEvent = { type: 'sos' | 'alerts' | 'reset' };
 
 export type ApiError = { error: string; details?: string[] };

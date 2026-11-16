@@ -2,7 +2,7 @@
   "name": "flare",
   "private": true,
   "version": "0.1.0",
-  "description": "FLARE — Disaster Response & Recovery Intelligence Platform (hackathon demo, simulated data only)",
+  "description": "FLARE: flood alerts that know where you are (hackathon demo, simulated scenario)",
   "workspaces": [
     "client",
     "server"
@@ -14,6 +14,7 @@
     "build": "npm run build -w client && npm run typecheck -w server",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
     "test": "npm test -w server",
+    "e2e": "node tools/e2e.mjs",
     "start": "npm run build -w client && npm start -w server"
   },
   "devDependencies": {

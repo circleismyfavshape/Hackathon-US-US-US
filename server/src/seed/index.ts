@@ -1,21 +1,23 @@
-// Synthetic demo seed. Single source of truth: contracts/demo-fixtures.json (owner: D2).
+// Synthetic demo seed. Single source of truth: contracts/demo-fixtures.json.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { Incident, LatLng, RecoverySnapshot, Shelter } from '../../../contracts/types.ts';
+import type { Alert, Incident, Scenario } from '../../../contracts/types.ts';
 
-export type DemoFixtures = {
-  incidents: Incident[];
-  shelters: Shelter[];
-  demoLocations: { id: string; incidentId?: string; label: string; location: LatLng }[];
-  alerts: { id: string; incidentId: string; afterSeconds: number; kind: 'flood' | 'shelter' | 'update'; text: string; source: string }[];
-  demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
-  demoTeams: string[];
-  recovery: RecoverySnapshot;
-};
+export type SeedAlert = Pick<Alert, 'id' | 'kind' | 'title' | 'text' | 'source'> & { incidentId: string; afterSeconds: number };
+
+export type DemoFixtures = Scenario & { alerts: SeedAlert[] };
+
+type RawIncident = Omit<Incident, 'updatedAt'> & { updatedMinutesAgo: number };
+type RawFixtures = Omit<DemoFixtures, 'incidents'> & { incidents: RawIncident[]; _note?: string };
 
 const fixturesPath = fileURLToPath(new URL('../../../contracts/demo-fixtures.json', import.meta.url));
 
-/** Fresh deep copy every call, so store resets never share references with the seed. */
-export function loadFixtures(): DemoFixtures {
-  return JSON.parse(readFileSync(fixturesPath, 'utf8')) as DemoFixtures;
+/** Fresh deep copy every call, so store resets never share references with the seed.
+ *  Incident times are stored as "minutes ago" and resolved against `now`, so the scenario always reads as current. */
+export function loadFixtures(now = Date.now()): DemoFixtures {
+  const { _note, incidents, ...rest } = JSON.parse(readFileSync(fixturesPath, 'utf8')) as RawFixtures;
+  return {
+    ...rest,
+    incidents: incidents.map(({ updatedMinutesAgo, ...i }) => ({ ...i, updatedAt: new Date(now - updatedMinutesAgo * 60_000).toISOString() })),
+  };
 }
