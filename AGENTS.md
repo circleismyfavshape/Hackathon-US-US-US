@@ -35,9 +35,9 @@ Owners review PRs in their area. Anyone may edit any file. An area can have seve
 
 | Area | Owner (GitHub login) | Folders |
 |---|---|---|
-| FLARE D1 Citizen UI, map geometry | `@Vais1` (Awais) | `client/src/features/citizen/`, `client/src/flare/Citizen.tsx`, `docs/DEMO_RUNBOOK.md` |
-| FLARE D2 Backend + integration | `@69sxjid` (Sajid) | root config, `contracts/`, `client/src/shared/`, `client/src/{App,main}.tsx`, `server/src/` except `recovery/`, `server/tests/api/` |
-| FLARE D3 Responder UI, lead | `@jeffyoh312` (Khaled) | `client/src/features/responder/`, `client/src/flare/Responder.tsx`, `README.md` |
-| FLARE D4 RecoveryGap engine | `@circleismyfavshape` (Ahmed) | `server/src/recovery/`, `server/tests/recovery/` |
+| Citizen app, map, live data | `@Vais1` (Awais) | `client/src/features/citizen/`, `client/src/flare/Citizen.tsx`, `client/src/flare/FlareMap.tsx`, `server/src/live/`, `docs/DEMO_RUNBOOK.md`, `docs/REAL_DATA.md` |
+| Backend, contract, integration | `@69sxjid` (Sajid) | root config, `contracts/`, `client/src/shared/`, `client/src/{App,main}.tsx`, `server/src/` except `live/`, `server/tests/` |
+| Responder console, design system, lead | `@jeffyoh312` (Khaled) | `client/src/flare/` except the files above, `tools/e2e.mjs`, `README.md` |
+| Logo, brand | `@circleismyfavshape` (Ahmed) | `client/src/shared/Logo.tsx`, `docs/flare-logo.jpg` |
 
-The project overview is in `README.md`. The original D1–D4 plan is in section 3 of `docs/process/FLARE_TEAM_AUTOPILOT.md`.
+The project overview is in `README.md`. The Recovery feature and its allocation engine were removed on 16 Nov 2026 (lead's decision); the code is in git history before that date. `docs/process/` holds the original hackathon-day plan and is history only.
