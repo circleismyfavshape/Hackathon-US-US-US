@@ -3,5 +3,4 @@ dist/
 .board/
 .git/
 .github/
-docs/process/
 package-lock.json
