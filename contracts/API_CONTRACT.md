@@ -1,4 +1,4 @@
-# FLARE API contract, v2.0
+# FLARE API contract, v2.1
 
 Changes are one versioned commit to this file and [`types.ts`](types.ts) together, plus a board post.
 
@@ -10,17 +10,17 @@ Changes are one versioned commit to this file and [`types.ts`](types.ts) togethe
 
 ## Endpoints
 
-| Method | Path              | Request                                                                             | 2xx response                                                                                                                                       |
-| ------ | ----------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/health`     |                                                                                     | `{ status:"ok", mode:"demo" }`                                                                                                                     |
-| GET    | `/api/scenario`   |                                                                                     | `Scenario`: `incidents`, `shelters` (safe zones), `demoLocations`, `routes`, `actions`, `contacts`, `defaultLocationId`, `demoBounds`, `demoTeams` |
-| GET    | `/api/alerts`     |                                                                                     | `Alert[]`: official warnings first, then simulated updates, newest first within each                                                               |
-| GET    | `/api/events`     |                                                                                     | Server-sent events (see below)                                                                                                                     |
-| POST   | `/api/sos`        | `SosCreate`                                                                         | **201** `Sos` with generated `id` (`SOS-XXXXXXXX`), `status:"pending"`, `assignedTeam:null`                                                        |
-| GET    | `/api/sos`        |                                                                                     | `Sos[]`, oldest first. **Demo responder only. Never public in a real system.**                                                                     |
-| GET    | `/api/sos/:id`    |                                                                                     | `Sos`                                                                                                                                              |
-| PATCH  | `/api/sos/:id`    | `{status:"assigned",assignedTeam}` \| `{status:"resolved"}` \| `{status:"pending"}` | `Sos`. `resolved` keeps `assignedTeam`; `pending` clears it                                                                                        |
-| POST   | `/api/demo/reset` |                                                                                     | `{ status:"reset", mode:"demo" }`. Reloads the scenario and clears all requests                                                                    |
+| Method | Path              | Request                                                                             | 2xx response                                                                                                                                                       |
+| ------ | ----------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/health`     |                                                                                     | `{ status:"ok", mode:"demo" }`                                                                                                                                     |
+| GET    | `/api/scenario`   |                                                                                     | `Scenario`: `incidents`, `shelters`, `demoLocations`, `routes`, `mapPoints`, `roadClosures`, `actions`, `contacts`, `defaultLocationId`, `demoBounds`, `demoTeams` |
+| GET    | `/api/alerts`     |                                                                                     | `Alert[]`: official warnings first, then simulated updates, newest first within each                                                                               |
+| GET    | `/api/events`     |                                                                                     | Server-sent events (see below)                                                                                                                                     |
+| POST   | `/api/sos`        | `SosCreate`                                                                         | **201** `Sos` with generated `id` (`SOS-XXXXXXXX`), `status:"pending"`, `assignedTeam:null`                                                                        |
+| GET    | `/api/sos`        |                                                                                     | `Sos[]`, oldest first. **Demo responder only. Never public in a real system.**                                                                                     |
+| GET    | `/api/sos/:id`    |                                                                                     | `Sos`                                                                                                                                                              |
+| PATCH  | `/api/sos/:id`    | `{status:"assigned",assignedTeam}` \| `{status:"resolved"}` \| `{status:"pending"}` | `Sos`. `resolved` keeps `assignedTeam`; `pending` clears it                                                                                                        |
+| POST   | `/api/demo/reset` |                                                                                     | `{ status:"reset", mode:"demo" }`. Reloads the scenario and clears all requests                                                                                    |
 
 `GET /api/incidents`, `GET /api/shelters` and `GET /api/demo/config` still answer with the matching parts of the scenario.
 
@@ -45,6 +45,8 @@ If the stream cannot be opened, clients fall back to polling every 3 s.
 - **Shelter** (a safe zone): `kind` (`relief | medical`), `name`, `note`, `location`. Every safe zone is outside every zone.
 - **Route**: a walking path on the road network from one `demoLocation` to one shelter: `distanceM`, `minutes`, `coordinates`. Every demo location inside a zone has a route to each safe zone of its incident. A route does not know which roads are flooded.
 - **Actions**: what to do, per zone level. **Contacts**: who to call.
+- **MapPoint**: `id`, `incidentId`, `kind` (`police | fire | roadblock | aid`), `name`, `note`, `location`, `sourceType:"simulation"`. These are illustrated operational posts, not verified stations or shelters.
+- **RoadClosure**: `id`, `incidentId`, `name`, `reason`, `coordinates` (a line in `[lng,lat]` order), `sourceType:"simulation"`. Routes do not avoid these segments.
 
 `server/tests/citizen/geo.test.ts` checks all of the above against the fixture, so a scenario edit that breaks one fails `npm test`.
 
@@ -62,9 +64,12 @@ If the stream cannot be opened, clients fall back to polling every 3 s.
 - `sourceType:"official"`: a real MET Malaysia weather warning, fetched on the server from `api.data.gov.my` (no key). `local` is true when it names Selangor or the Klang Valley; local warnings come first. Expired warnings and "No Advisory" rows are dropped. Cached for 2 minutes; on failure the last good list is served. Off with `FLARE_LIVE_ALERTS=0`.
 - `sourceType:"simulation"`: part of the scenario, released over time after start or reset.
 
+Agency and ministry bulletins are exercise content and always remain simulated. Scenario contours and closure state are fixed; a bulletin does not alter the geometry. Cached official warnings are checked against `validTo` on every read, including during feed failures.
+
 Clients must show which is which.
 
 ## Version history
 
+- **v2.1** (16 Nov 2026): added scenario `mapPoints` and `roadClosures`, expanded four-area fixtures and announcement timeline. Corrected Civil Defence guidance to the integrated 999 number. Cached weather warnings now expire at their validity boundary.
 - **v2.0** (16 Nov 2026): app-first redesign. Added `/api/scenario`, `/api/events`, zone level `severe`, zone `depth`, incident `area` and `summary`, shelter `kind` and `note`, routes, actions, contacts, alert `title`, `sourceType`, `validTo`, `local`, `url`. `description` became optional. **Removed** the recovery feature: `/api/recovery`, `/api/recovery/compare`, `/api/recovery/explain` and their types.
-- **v1.2**: `/api/alerts`. **v1.1**: optimized recovery strategy and AI explanation (both removed in v2.0). **v1.0**: first frozen contract.
+- **v1.2**: `/api/alerts`. **v1.1**: experimental recovery endpoints (removed in v2.0). **v1.0**: first shared contract.

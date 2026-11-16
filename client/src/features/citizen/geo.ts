@@ -18,6 +18,18 @@ export function pointInRing(p: LatLng, ring: Ring): boolean {
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const [xi, yi] = ring[i];
     const [xj, yj] = ring[j];
+    // Include the boundary: a point on a marked flood edge should still raise the alert.
+    const cross = (p.lng - xi) * (yj - yi) - (p.lat - yi) * (xj - xi);
+    const epsilon = 1e-10;
+    if (
+      Math.abs(cross) <= epsilon &&
+      p.lng >= Math.min(xi, xj) - epsilon &&
+      p.lng <= Math.max(xi, xj) + epsilon &&
+      p.lat >= Math.min(yi, yj) - epsilon &&
+      p.lat <= Math.max(yi, yj) + epsilon
+    ) {
+      return true;
+    }
     if (yi > p.lat !== yj > p.lat && p.lng < ((xj - xi) * (p.lat - yi)) / (yj - yi) + xi) {
       inside = !inside;
     }
@@ -61,7 +73,7 @@ export function distanceM(a: LatLng, b: LatLng): number {
   const h =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 2 * 6_371_000 * Math.asin(Math.sqrt(h));
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(Math.min(1, h)));
 }
 
 export function nearest<T extends { location: LatLng }>(p: LatLng, items: T[]): T {

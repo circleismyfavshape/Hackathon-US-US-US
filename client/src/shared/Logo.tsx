@@ -1,4 +1,4 @@
-// FLARE logo, traced from the lead's artwork (docs/flare-logo.jpg): two orange signal arcs
+// FLARE logo, traced from the project artwork (docs/flare-logo.jpg): two orange signal arcs
 // over a chevron, plus the FLARE wordmark. The chevron and wordmark use currentColor, so the
 // logo works on light and dark backgrounds; the arcs stay orange.
 import type { SVGProps } from 'react';

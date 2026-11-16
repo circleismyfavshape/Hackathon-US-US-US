@@ -1,7 +1,8 @@
 // Phone view: the citizen app (or the responder console) inside a phone frame at real phone size. It is the same
 // live page in an iframe, so it scrolls and its notifications drop in at the top like push alerts.
 // The switches for role, device and simulated location stay in the viewer bar, outside the phone.
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PHONE_FEATURE_EVENT, PHONE_NOTES, type PhoneFeature } from './phoneNotes.ts';
 import { clockMY, useDemoLocation, useScenario } from './data.ts';
 import Citizen from './Citizen.tsx';
 import Responder from './Responder.tsx';
@@ -67,18 +68,26 @@ export function useClock() {
   return clockMY(now).replace(/^0/, '');
 }
 
-const NOTE: Record<Role, { title: string; body: string }> = {
-  citizen: {
-    title: 'What the citizen sees',
-    body: 'This is the app on their phone. Use “Citizen is at” in the bar above to move them into or out of a flood zone, and watch the app react.',
-  },
-  responder: {
-    title: 'What a first responder sees',
-    body: 'Requests arrive here the moment a citizen sends one. Send a team or resolve it, then switch back to the citizen to see their screen follow.',
-  },
-};
-
 export default function Phone({ role }: { role: Role }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [feature, setFeature] = useState<PhoneFeature>(role === 'citizen' ? 'guide' : 'requests');
+  const note = PHONE_NOTES[feature];
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      if (
+        event.origin !== window.location.origin ||
+        event.source !== frame.current?.contentWindow
+      ) {
+        return;
+      }
+      const data = event.data;
+      if (data?.type === PHONE_FEATURE_EVENT && Object.hasOwn(PHONE_NOTES, data.feature)) {
+        setFeature(data.feature as PhoneFeature);
+      }
+    };
+    window.addEventListener('message', receive);
+    return () => window.removeEventListener('message', receive);
+  }, []);
   const { scenario } = useScenario();
   const [location, setLocation] = useDemoLocation(scenario);
   const scale = usePhoneScale(56 + 48);
@@ -113,6 +122,7 @@ export default function Phone({ role }: { role: Role }) {
               </span>
             </div>
             <iframe
+              ref={frame}
               key={role}
               title={`FLARE ${role} app on a phone`}
               src={`/${role}`}
@@ -124,9 +134,17 @@ export default function Phone({ role }: { role: Role }) {
             <div className="fl-phone-home" />
           </div>
         </PhoneBody>
-        <aside className="fl-stage-note">
-          <strong>{NOTE[role].title}</strong>
-          <p>{NOTE[role].body}</p>
+        <aside className="fl-stage-note" aria-live="polite" data-testid="phone-feature-note">
+          <span className="fl-note-label">
+            {role === 'citizen' ? 'Citizen experience' : 'Responder experience'}
+          </span>
+          <strong>{note.title}</strong>
+          <p>{note.body}</p>
+          <ul>
+            {note.tips.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
         </aside>
       </div>
     </Viewer>

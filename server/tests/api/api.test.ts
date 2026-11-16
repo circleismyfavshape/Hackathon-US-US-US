@@ -255,6 +255,29 @@ describe('SOS lifecycle', () => {
 });
 
 describe('live events', () => {
+  test('disconnecting an event stream releases its store subscription', async () => {
+    let activeSubscriptions = 0;
+    const subscribe = store.subscribe.bind(store);
+    store.subscribe = (listener) => {
+      activeSubscriptions++;
+      const unsubscribe = subscribe(listener);
+      let closed = false;
+      return () => {
+        if (!closed) {
+          closed = true;
+          activeSubscriptions--;
+          unsubscribe();
+        }
+      };
+    };
+    const response = await app.request('/api/events');
+    const reader = response.body!.getReader();
+    await reader.read();
+    assert.equal(activeSubscriptions, 1);
+    await reader.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(activeSubscriptions, 0);
+  });
   test('the store tells subscribers about every change, and stops after unsubscribe', async () => {
     const seen: string[] = [];
     const off = store.subscribe((e) => seen.push(e.type));

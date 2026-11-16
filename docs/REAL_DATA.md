@@ -1,34 +1,38 @@
-# What is real and what is simulated
+# Data boundaries
 
-## Real
+FLARE combines a repeatable flood-response scenario with a live regional weather feed. The two are labelled throughout the interface.
 
-| What                             | Source                                                                                                                   | How it is used                                                                                                                                                                       |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Weather warnings                 | MET Malaysia, through `https://api.data.gov.my/weather/warning/` (no key, free)                                          | Fetched on the server (`server/src/live/met.ts`), shown in **News** under "Official weather warnings", each with its issue time, labelled _Official_. New ones raise a notification. |
-| Streets and buildings on the map | OpenStreetMap contributors, served by OpenFreeMap                                                                        | The 3D basemap.                                                                                                                                                                      |
-| Place names                      | Real places in Bandar Sunway, Shah Alam, Subang Jaya and Klang                                                           | Demo locations and safe zones are named after them.                                                                                                                                  |
-| Walking routes                   | OpenStreetMap road network (ODbL), computed once with the OSRM foot profile and stored in `contracts/demo-fixtures.json` | Drawn on the map with distance and walking time.                                                                                                                                     |
-| Phone numbers                    | 999, 991 (Civil Defence), NADMA 03-8064 2400                                                                             | Shown under "Who to contact".                                                                                                                                                        |
+## Live and external data
 
-## Simulated
+| Information               | Source                                                                                            | How it is used                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Regional weather warnings | MET Malaysia through [data.gov.my](https://developer.data.gov.my/realtime-api/weather), CC BY 4.0 | Shown under **Official weather warnings**, with source and issue time.                                              |
+| Streets and buildings     | OpenStreetMap contributors, served by OpenFreeMap                                                 | The 3D basemap, with attribution supplied by the style.                                                             |
+| Walking geometry          | OpenStreetMap road network through the OSRM walking service                                       | Prepared once and stored with the fixture.                                                                          |
+| Emergency contacts        | Malaysian government, Civil Defence and NADMA publications                                        | **999** for integrated emergency response; `03-8064 2400` for the NADMA/NDCC line. See [references](REFERENCES.md). |
 
-Every flood, every zone outline and damage level, every safe zone's status, every team, every scenario update and every request. Zones are illustrative shapes, not a measured flood footprint. A safe zone named after a real building does not mean that building is a relief centre.
+MET warnings describe regional weather. They do not establish a flooded street, measured water depth or evacuation instruction at a specific point.
 
-## Rules the code keeps
+## Scenario data
 
-- Real and simulated news are never mixed in one list, and each item says which it is.
-- Real data never blocks the app. The MET fetch has a 4 second timeout. A good answer is cached for 2 minutes; after a failure the last good list is served and the failure is cached for 30 seconds, so a dead network does not slow every request.
-- The official feed is on by default and can be turned off with `FLARE_LIVE_ALERTS=0`.
-- Expired warnings and "No Advisory" rows are dropped. Warnings that name Selangor or the Klang Valley are listed first; warnings for other states are kept and marked "Other states", so the list is not empty on a quiet day for Selangor.
-- A route follows real roads but does not know which of them are flooded. The app says so next to every route.
-- Real GPS is opt-in, stays in the browser, and only selects the nearest demo place.
+Every flood footprint, depth, damage level, closure, roadblock, response post, aid delivery, shelter status, request and government-style announcement is simulated. Contours are illustrative and are not a hydrological model.
 
-## Honest limits for a pitch
+The map uses real geography as context. Scenario place labels and operational posts are not a verified directory of shelters, clinics, police stations or fire stations. A listing does not confirm opening, staffing or safe access. Marker popups and scenario news say **Simulation** or **Simulated**.
 
-MET Malaysia's warnings are regional weather warnings (thunderstorms, continuous rain, strong winds). They are not a flood alert for a street. The claim that is true: _a simulated flood scenario with a real, live official weather-warning feed and real map data._
+Agency names describe roles in an exercise. Statements attributed to the Prime Minister's Office, NADMA, PDRM, BOMBA, JKM or a ministry are fictional bulletins, not live reports or endorsements. They never enter the official weather section.
 
-## Sources checked and not used
+## Routes and closures
 
-- MET Malaysia forecast and Open-Meteo rain and river discharge: all work and need no key, but they add numbers a person in danger does not need.
-- Overpass for real shelter locations: returned nothing usable in the time available, so safe zones stay simulated.
-- None of these APIs send a CORS header, so they must be called from the server, not the browser.
+Routes follow the walking road network but do not avoid illustrated flood polygons or closure lines. Distances and times are network estimates; some detours are long. A drawn route is not proof that it is passable or suitable during a flood. Closure lines illustrate affected segments and are not verified street surveys.
+
+Each relief or medical point lies outside every drawn flood zone. That is a fixture invariant checked by tests, not a real-world safety certification.
+
+## Failure handling and privacy
+
+- Weather requests time out after four seconds. Good responses are cached for two minutes; failures for 30 seconds. Still-valid items remain available, but expired warnings are removed on every read.
+- Weather retrieval never blocks the guide or request workflow. An empty official section can mean no warnings or an unavailable feed; the interface explains both possibilities.
+- If basemap retrieval fails, the map uses a blank style and still draws scenario overlays. A browser that cannot start the map shows a fallback message.
+- Optional GPS only selects the nearest scenario place inside the browser. Raw GPS does not reach the server.
+- Request coordinates are scenario locations, rounded by the API. There are no accounts; use fictional request details when exploring the prototype.
+
+Sources and terms: [REFERENCES.md](REFERENCES.md), [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

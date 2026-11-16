@@ -1,6 +1,7 @@
 // The first responder console: every request in one queue and on the map, the moment it is sent.
 // Pick a request, send a team, mark it resolved. The citizen's screen follows within a second.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePhoneFeature } from './phoneNotes.ts';
 import { ArrowLeft, CheckCheck, List, Map as MapIcon, Send, Undo2, Users } from 'lucide-react';
 import { countByStatus, nearest } from '../features/citizen/geo.ts';
 import { api, type Scenario, type Sos, type SosStatus } from '../shared/api.ts';
@@ -53,7 +54,11 @@ export default function Responder({ device }: { device: Device }) {
   );
 }
 
-const placeOf = (s: Sos, scenario: Scenario) => nearest(s.location, scenario.demoLocations).label;
+const placeOf = (request: Sos, scenario: Scenario) =>
+  nearest(
+    request.location,
+    scenario.demoLocations.filter((place) => place.incidentId === request.incidentId),
+  ).label;
 const areaOf = (s: Sos, scenario: Scenario) =>
   scenario.incidents.find((i) => i.id === s.incidentId)?.area ?? 'Unknown area';
 
@@ -85,6 +90,7 @@ function Console({ scenario }: { scenario: Scenario }) {
     [sorted, filter],
   );
   const selected = live.list.find((s) => s.id === selectedId) ?? null;
+  usePhoneFeature(selected ? 'dispatch' : pane === 'map' ? 'map' : 'requests');
 
   // A request that no longer exists (the demo was reset) cannot stay selected.
   useEffect(() => {
@@ -163,7 +169,12 @@ function Console({ scenario }: { scenario: Scenario }) {
             </p>
           )}
           {!live.loaded ? (
-            <LoadState error={null} onRetry={() => {}} />
+            <LoadState
+              error={
+                live.ok ? null : 'Requests could not be loaded. Check the connection and try again.'
+              }
+              onRetry={live.refresh}
+            />
           ) : shown.length === 0 ? (
             <p className="fl-empty">
               {live.list.length === 0
@@ -250,7 +261,13 @@ function Detail({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
-  useEffect(() => () => void (alive.current = false), []);
+  // StrictMode mounts effects twice in development; each setup must restore this flag.
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   const now = useNow();
 
   const patch = useCallback(
