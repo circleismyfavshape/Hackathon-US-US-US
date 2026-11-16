@@ -65,7 +65,7 @@ export function mapWarnings(raw: unknown, now = Date.now()): Alert[] {
       continue;
     } // "nothing to report" rows
     const validTo = myt(r.valid_to);
-    if (validTo && validTo.getTime() < now) {
+    if (validTo && validTo.getTime() <= now) {
       continue;
     } // expired
     const key = `${title}|${r.warning_issue?.issued}`;
@@ -119,7 +119,11 @@ export function createMetAlerts({
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
-      const items = mapWarnings(await res.json(), now());
+      const payload: unknown = await res.json();
+      if (!Array.isArray(payload)) {
+        throw new Error('Unexpected MET warning response');
+      }
+      const items = mapWarnings(payload, now());
       cache = { until: now() + ttlMs, items };
       return items;
     } catch {
@@ -131,12 +135,15 @@ export function createMetAlerts({
   }
 
   return async () => {
+    // A cached bulletin can expire before the cache TTL, including during an outage.
+    const currentItems = (items: Alert[]) =>
+      items.filter((item) => item.validTo === null || Date.parse(item.validTo) > now());
     if (cache && now() < cache.until) {
-      return cache.items;
+      return currentItems(cache.items);
     }
     inflight ??= load().finally(() => {
       inflight = null;
     });
-    return inflight;
+    return currentItems(await inflight);
   };
 }
