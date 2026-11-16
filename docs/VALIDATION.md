@@ -6,7 +6,7 @@ Reviewed 16 November 2026 on Windows, using Node.js 24.16.0 and Playwright 1.65.
 
 | Check                                             | Result                                                                  |
 | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `npm test`                                        | 78 tests passed across 11 suites                                        |
+| `npm test`                                        | 84 tests passed across 11 suites                                        |
 | `npm run build`                                   | Production client build and server typecheck passed                     |
 | `npm run typecheck`                               | Both workspaces passed with the final dependencies                      |
 | `npm run format:check`                            | Passed                                                                  |
@@ -20,6 +20,8 @@ Reviewed 16 November 2026 on Windows, using Node.js 24.16.0 and Playwright 1.65.
 The production walkthrough generated `docs/screenshots/01` through `12`. Additional local verification images were kept outside the tracked documentation.
 
 ## Problems corrected
+
+The Vercel hosting update also passed all 21 browser steps against both a local hosted adapter with real Redis and the public deployment. Six additional tests cover state across function instances, overlapping submissions, reset, failed storage writes, event parsing and preview isolation. Cloud builds passed after configuring ES modules and the root TypeScript settings. The hosted walkthrough used a five-second live-update deadline for network latency; local checks retain one second. Screenshots were inspected and kept outside the repository. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 - Restored both views when an older running server omits optional map layers. Scenario responses now validate their required fields and default missing operational layers to empty lists.
 - Removed the deprecated TypeScript `baseUrl` setting and selected the workspace compiler for VS Code. Vite also resolves a single React installation across both workspaces.

@@ -9,6 +9,7 @@
 <p align="center">Location-based flood guidance and a shared picture of the response.</p>
 
 <p align="center">
+  <a href="https://flare-flood-response.vercel.app">Live demo</a> ·
   <a href="#why-this-exists">The problem</a> ·
   <a href="#one-incident-two-perspectives">See the flow</a> ·
   <a href="#run-locally">Run locally</a> ·
@@ -141,7 +142,7 @@ See the [walkthrough](docs/DEMO_RUNBOOK.md) for a repeatable tour.
 flowchart LR
     C[Citizen app] -->|request help| API[Hono API]
     R[Responder console] -->|assign or resolve| API
-    API <--> S[(In-memory scenario and requests)]
+    API <--> S[(Scenario and request store)]
     API -->|server-sent events| C
     API -->|server-sent events| R
     MET[MET Malaysia via data.gov.my] -->|regional warnings| API
@@ -190,24 +191,24 @@ docs/                     Architecture, scenarios, walkthrough, references and s
 
 The browser walkthrough checks the citizen/responder lifecycle, map layers, all four areas, contextual notes, mobile layouts and connection failures. It also produces the screenshots shown here. See [architecture and maintenance notes](docs/ARCHITECTURE.md) and [contribution guidance](CONTRIBUTING.md).
 
-The [latest review record](docs/VALIDATION.md) reports **78 passing tests** and **21 passing browser steps in both production and development mode**, with the scope and remaining limits stated alongside the results.
+The [latest review record](docs/VALIDATION.md) reports **84 passing tests** and **21 passing browser steps**, including the live Vercel deployment, with the scope and remaining limits stated alongside the results.
 
 ## Current limits
 
-FLARE runs as a single-process prototype with no authentication or persistent database. Requests disappear on restart or reset. There is no background mobile push service, live flood sensing, official dispatch integration or road-passability model. The lock-screen alert demonstrates the entry flow in a browser.
+Local development keeps requests in memory until restart or reset. The [hosted demo](https://flare-flood-response.vercel.app) uses shared Redis storage and event delivery on Vercel; see the [deployment guide](docs/DEPLOYMENT.md). Reset clears the hosted queue for all visitors. There is no authentication, background mobile push service, live flood sensing, official dispatch integration or road-passability model. The lock-screen alert demonstrates the entry flow in a browser.
 
-Operational use would require verified flood and closure feeds, validated destinations, authenticated response teams, persistent storage and routes assessed against actual conditions. Those capabilities are outside the current implementation.
+Operational use would require verified flood and closure feeds, validated destinations, authenticated response teams, retention policies and routes assessed against actual conditions. Those capabilities are outside the current implementation.
 
 ## Team
 
 Contributions overlapped across the project; these are the main areas each member worked on.
 
-| Member                                          | Contribution                                                                                                                                       |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member                                          | Contribution                                                                                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Khaled Morshed](https://github.com/jeffyoh312) | Team lead and full-stack development across the project, including integration, UI/UX, responder workflows, scenario improvements and testing. |
-| [Sajid](https://github.com/69sxjid)             | Backend lead, application foundation, API contracts, integration and shared UI.                                                                    |
-| [Awais](https://github.com/Vais1)               | Frontend lead, Citizen experience, maps, location and DF checks, live weather data and documentation.                                              |
-| [Ahmed](https://github.com/circleismyfavshape)  | Full-stack support, Logo, branding, stratagy and early resource-allocation work.                                                                   |
+| [Sajid](https://github.com/69sxjid)             | Backend lead, application foundation, API contracts, integration and shared UI.                                                                |
+| [Awais](https://github.com/Vais1)               | Frontend lead, Citizen experience, maps, location and DF checks, live weather data and documentation.                                          |
+| [Ahmed](https://github.com/circleismyfavshape)  | Full-stack support, Logo, branding, stratagy and early resource-allocation work.                                                               |
 
 ## License
 
