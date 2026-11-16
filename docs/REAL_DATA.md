@@ -33,6 +33,7 @@ Each relief or medical point lies outside every drawn flood zone. That is a fixt
 - Weather retrieval never blocks the guide or request workflow. An empty official section can mean no warnings or an unavailable feed; the interface explains both possibilities.
 - If basemap retrieval fails, the map uses a blank style and still draws scenario overlays. A browser that cannot start the map shows a fallback message.
 - Optional GPS only selects the nearest scenario place inside the browser. Raw GPS does not reach the server.
+- The citizen profile is a fictional person, and its ID number and phone numbers are not real. Edits stay in the browser; the profile is sent only with a request, and only when sharing is left on.
 - Request coordinates are scenario locations, rounded by the API. There are no accounts; use fictional request details when exploring the prototype.
 
 Sources and terms: [REFERENCES.md](REFERENCES.md), [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

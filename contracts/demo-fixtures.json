@@ -2537,6 +2537,17 @@
     "minLng": 101.45,
     "maxLng": 101.63
   },
+  "demoProfile": {
+    "name": "Aisyah Rahman",
+    "age": 21,
+    "idNumber": "DEMO-050412-10-0000",
+    "phone": "012-555 0142",
+    "bloodType": "O+",
+    "medical": "Asthma. Carries a blue inhaler.",
+    "appearance": "Long black hair, glasses, yellow raincoat, grey backpack.",
+    "languages": "Malay, English",
+    "emergencyContact": "Rahman Idris (father) · 019-555 0177"
+  },
   "demoTeams": ["Rescue Team Alpha", "Rescue Team Bravo", "Boat Unit Charlie", "Medic Unit Delta"],
   "alerts": [
     {

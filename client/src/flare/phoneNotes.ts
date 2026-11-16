@@ -1,7 +1,7 @@
 // Feature notes belong to the desktop viewer, outside the citizen's phone screen.
 import { useEffect } from 'react';
 
-export type PhoneFeature = 'guide' | 'map' | 'news' | 'help' | 'requests' | 'dispatch';
+export type PhoneFeature = 'guide' | 'map' | 'news' | 'help' | 'profile' | 'requests' | 'dispatch';
 export const PHONE_FEATURE_EVENT = 'flare:phone-feature';
 
 export const PHONE_NOTES: Record<PhoneFeature, { title: string; body: string; tips: string[] }> = {
@@ -20,6 +20,7 @@ export const PHONE_NOTES: Record<PhoneFeature, { title: string; body: string; ti
     tips: [
       'Tap a service or roadblock for details.',
       'Use Map layers to show services and closures.',
+      'Hide info clears the legend and route card off the map.',
       'Routes follow streets; they are not checked for flood safety.',
     ],
   },
@@ -39,6 +40,15 @@ export const PHONE_NOTES: Record<PhoneFeature, { title: string; body: string; ti
       'The request appears in the responder console.',
       'Switch to First responder and send a team.',
       'Come back to watch Waiting change to Team on the way, then Resolved.',
+    ],
+  },
+  profile: {
+    title: 'Tell responders who you are',
+    body: 'The profile holds a name, age, ID number, medical notes and how to recognise the person. It travels with a request for help.',
+    tips: [
+      'Edit the profile; it is saved on this device.',
+      'Send a request, then open it as First responder to see the profile.',
+      'Sharing can be turned off on the request form.',
     ],
   },
   requests: {

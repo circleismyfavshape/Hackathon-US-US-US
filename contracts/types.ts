@@ -104,6 +104,26 @@ export type Scenario = {
   defaultLocationId: string;
   demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
   demoTeams: string[];
+  /** The fictional person the demo phone belongs to. The app starts from it and lets them edit it. */
+  demoProfile: CitizenProfile;
+};
+
+/** Who is asking for help. Sent with a request only when the person chooses to share it, so the responder
+ *  knows who to look for and who they are talking to. Every field is short free text except `age`. */
+export type CitizenProfile = {
+  name: string;
+  age: number;
+  /** Identity card number. Fictional in the demo. */
+  idNumber: string;
+  phone: string;
+  bloodType: string;
+  /** Medical conditions, medicines, allergies or mobility needs. May be empty. */
+  medical: string;
+  /** What the person looks like or is wearing, to help a team spot them. May be empty. */
+  appearance: string;
+  languages: string;
+  /** Name, relationship and phone number of someone to call. May be empty. */
+  emergencyContact: string;
 };
 
 export const SOS_TYPES = ['trapped', 'medical-help', 'supplies', 'other'] as const;
@@ -127,6 +147,8 @@ export type SosCreate = {
   description: string;
   location: LatLng;
   locationMode: LocationMode;
+  /** The sender's profile, when they chose to share it. Null or absent otherwise. */
+  profile?: CitizenProfile | null;
 };
 
 export type Sos = SosCreate & {

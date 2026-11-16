@@ -86,9 +86,38 @@ try {
       .waitFor();
     assert.match(await app.locator('.fl-mapcard').innerText(), /min walk/);
     await app.locator('.fl-you').waitFor();
+    // Opened from the tab bar, the map starts tilted: the button offers the flat view.
+    assert.equal((await app.locator('.fl-map-tilt').innerText()).trim(), '2D');
     await settle(page, 7000);
     await page.screenshot({ path: `${shots}/03-phone-map-route.png` });
   });
+
+  await step(
+    'directions from the emergency guide open flat, and map information can be hidden',
+    async () => {
+      await app.locator('.fl-tabbar button', { hasText: 'Emergency' }).click();
+      await app.getByRole('button', { name: /Show the route to/ }).click();
+      await app.locator('.fl-mapcard').waitFor();
+      // Flat now, so the button offers 3D. The person can still switch.
+      assert.equal((await app.locator('.fl-map-tilt').innerText()).trim(), '3D');
+      await app.locator('.fl-map-tilt').click();
+      assert.equal((await app.locator('.fl-map-tilt').innerText()).trim(), '2D');
+      await app.locator('.fl-map-tilt').click();
+
+      assert.equal(await app.locator('.fl-legend').count(), 1);
+      await app.getByTestId('map-info-toggle').click();
+      for (const overlay of ['.fl-legend', '.fl-mapcard', '.fl-map-layers']) {
+        assert.equal(await app.locator(overlay).count(), 0, `${overlay} should be hidden`);
+      }
+      // The route, your position and the safe zone stay on the map.
+      await app.locator('.fl-you').waitFor();
+      assert.match(await app.getByTestId('map-info-toggle').innerText(), /Show info/);
+      await settle(page, 6000);
+      await page.screenshot({ path: `${shots}/13-phone-map-clear-2d.png` });
+      await app.getByTestId('map-info-toggle').click();
+      await app.locator('.fl-mapcard').waitFor();
+    },
+  );
 
   await step('news separates simulated updates from official warnings', async () => {
     await app.locator('.fl-tabbar button', { hasText: 'News' }).click();
@@ -101,8 +130,34 @@ try {
     assert.match(text, /Near you/);
     assert.match(text, /Official weather warnings/);
     assert.match(text, /Simulated ·/);
+    // Exactly one item is marked as the most recent, and the strip at the top names it.
+    assert.equal(await app.locator('.fl-news-flag[data-latest]').count(), 1);
+    const latestTitle = await app.locator('.fl-news[data-latest] h3').innerText();
+    assert.ok((await app.getByTestId('latest').innerText()).includes(latestTitle));
+    const times = await app
+      .locator('.fl-newsgroup')
+      .first()
+      .locator('time')
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('datetime')));
+    assert.deepEqual([...times].sort().reverse(), times, 'a section lists newest first');
     await settle(page, 800);
     await page.screenshot({ path: `${shots}/04-phone-news.png` });
+  });
+
+  await step('the profile can be read and edited', async () => {
+    await app.locator('.fl-tabbar button', { hasText: 'Profile' }).click();
+    assert.equal(await app.getByTestId('profile-name').innerText(), 'Aisyah Rahman');
+    await page.getByTestId('phone-feature-note').getByText('Tell responders who you are').waitFor();
+    await settle(page, 500);
+    await page.screenshot({ path: `${shots}/14-phone-profile.png` });
+    await app.getByTestId('edit-profile').click();
+    await app.locator('#fl-profile-appearance').fill('Yellow raincoat, red umbrella');
+    await app.locator('#fl-profile-age').fill('0');
+    assert.equal(await app.getByTestId('save-profile').isDisabled(), true);
+    await app.locator('#fl-profile-age').fill('22');
+    await app.getByTestId('save-profile').click();
+    assert.match(await app.locator('.fl-profile').innerText(), /Age 22/);
+    assert.match(await app.locator('.fl-profile').innerText(), /red umbrella/);
   });
 
   let sosId;
@@ -116,6 +171,7 @@ try {
     await app.getByRole('button', { name: 'One more' }).click();
     assert.equal(await app.getByTestId('people').innerText(), '3');
     await app.locator('#fl-note').fill('Second floor, water still rising');
+    assert.match(await app.locator('.fl-sendas').innerText(), /Sending as Aisyah Rahman/);
     await page.screenshot({ path: `${shots}/05-phone-request-form.png` });
     await app.getByTestId('send-sos').click();
     sosId = await app.getByTestId('sos-id').innerText();
@@ -131,6 +187,7 @@ try {
     await item.waitFor();
     assert.match(await item.innerText(), /Trapped · 3 people/);
     assert.match(await item.innerText(), /Monash University/);
+    assert.match(await item.innerText(), /Aisyah Rahman, 22/);
   });
 
   await step('a second request reaches the open console with a live notification', async () => {
@@ -150,11 +207,30 @@ try {
     await ops.getByTestId('queue-item').nth(1).waitFor({ timeout: liveTimeout });
     assert.ok(Date.now() - t < 1000);
     assert.match(await ops.locator('.fl-toast').first().innerText(), /New request · Medical/);
+    // On a wide screen a notification has a close button.
+    await ops.locator('.fl-toast-close').first().click();
+    assert.equal(await ops.locator('.fl-toast').count(), 0);
+    // That request was sent without a profile, and the console says so.
+    await ops.getByTestId('queue-item').nth(1).click();
+    await ops.getByTestId('no-profile').waitFor();
   });
 
   await step('sending a team updates the citizen through the live stream', async () => {
     await ops.getByTestId('queue-item').filter({ hasText: sosId }).click();
     assert.equal(await ops.getByTestId('detail-id').innerText(), sosId);
+    // The responder sees who is asking: the profile as edited on the phone.
+    const who = await ops.getByTestId('request-profile').innerText();
+    assert.match(who, /Aisyah Rahman/);
+    assert.match(who, /Age 22/);
+    assert.match(who, /red umbrella/);
+    assert.match(who, /Asthma/);
+    // Contact details are one click away, and the dispatch button stays on screen without scrolling.
+    await ops.getByTestId('request-profile').getByText('Contact and other details').click();
+    assert.match(await ops.getByTestId('request-profile').innerText(), /Rahman Idris \(father\)/);
+    await ops.getByTestId('request-profile').getByText('Contact and other details').click();
+    assert.equal(await ops.getByTestId('assign').isVisible(), true);
+    const assign = await ops.getByTestId('assign').boundingBox();
+    assert.ok(assign.y + assign.height <= ops.viewportSize().height, 'dispatch button is in view');
     // A failed assignment must show an error and leave the controls available for a retry.
     expectedDispatchErrors.add(ops);
     await ops.route('**/api/sos/*', (route) =>
@@ -180,6 +256,23 @@ try {
     assert.match(await app.locator('.fl-toast').first().innerText(), /Help is on the way/);
     await settle(page, 600);
     await page.screenshot({ path: `${shots}/07-phone-team-on-the-way.png` });
+    // On the phone a notification is swiped away. A short drag puts it back; a long one clears it.
+    const banner = await app.locator('.fl-toast').first().boundingBox();
+    const y = banner.y + banner.height / 2;
+    const x = banner.x + banner.width / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 30, y, { steps: 4 });
+    await page.mouse.up();
+    assert.equal(await app.locator('.fl-toast').count(), 1, 'a short drag keeps the notification');
+    assert.equal(await app.locator('.fl-toast-close').first().isVisible(), false);
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 160, y, { steps: 8 });
+    await page.mouse.up();
+    await app.locator('.fl-toast').waitFor({ state: 'detached', timeout: 2000 });
+    // Swiping it away must not have opened anything: the request screen is still showing.
+    await app.getByTestId('sos-headline').waitFor();
   });
 
   await step('resolving it updates the citizen through the live stream', async () => {
