@@ -220,7 +220,7 @@ Contributions overlapped across the project; these are the main areas each membe
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Khaled Morshed](https://github.com/jeffyoh312)          | Team lead and full-stack development across the project, including integration, UI/UX, responder workflows, scenario improvements and testing. |
 | [Sajid Anas](https://github.com/69sxjid)                 | Backend lead, application foundation, API contracts, integration and shared UI.                                                                |
-| [Mohammed Awais](https://github.com/Vais1)               | Frontend lead, Citizen experience, maps, location and DF checks, live weather data and documentation.                                          |
+| [Awais Ghaffar](https://github.com/Vais1)               | Frontend lead, Citizen experience, maps, location and DF checks, live weather data and documentation.                                          |
 | [Ahmed Sayedgotb](https://github.com/circleismyfavshape) | Full-stack support, Logo, branding, stratagy and early resource-allocation work.                                                               |
 
 ## License
