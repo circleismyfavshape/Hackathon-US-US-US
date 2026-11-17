@@ -3,3 +3,14 @@ dist/
 .board/
 .git/
 package-lock.json
+.vercel/
+.vscode/
+.idea/
+demo-video/
+.env*
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+.ssh/

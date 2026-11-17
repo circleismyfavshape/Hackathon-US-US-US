@@ -1259,6 +1259,10 @@ function Help({
         <p className="fl-sendfrom">
           <MapPin size={15} aria-hidden /> Sending from <strong>{sit.location.label}</strong>
         </p>
+        <p className="fl-fine">
+          Public demo: use fictional details only. Requests and shared profiles are visible to all
+          visitors.
+        </p>
         {error && (
           <p className="fl-inline-warn" role="alert">
             {error}

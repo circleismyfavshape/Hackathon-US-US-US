@@ -26,6 +26,8 @@ FLARE brings those questions into one flow. A location check opens an emergency 
 
 > **Interactive prototype.** Floods, road closures, response posts, relief availability and government-style announcements are simulated. Regional weather warnings come live from MET Malaysia. Requests do not reach emergency services. In a real emergency, call **999**.
 
+> **Public demo: use fictional details only.** Anyone can view submitted requests and shared profiles, change request status, or reset the queue. Do not enter real ID numbers, contact details, medical information or other private information. Redis credentials stay on the server; this does not make the demo's request data private. See [security and privacy](docs/SECURITY.md).
+
 | The alert                                                         | The next steps                                                                                            | The local situation                                                                                  |
 | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | ![FLARE lock-screen flood alert](docs/screenshots/01-landing.png) | ![Emergency guide with immediate steps and relief options](docs/screenshots/02-phone-emergency-guide.png) | ![3D map with flood levels, closures and response services](docs/screenshots/03-phone-map-route.png) |
@@ -184,6 +186,12 @@ tools/                    Browser checks and route maintenance
 docs/                     Architecture, scenarios, walkthrough, references and screenshots
 ```
 
+The dotfiles are small project settings: `.gitignore` keeps local files and credentials out of Git,
+`.gitattributes` and `.editorconfig` keep text files consistent, and the Prettier files define formatting.
+Keep these files and `package-lock.json`. Editor preferences (`.vscode/`, `.idea/`), local tool state
+(`.board/`, `.vercel/`), dependencies, build output and video-production files (`demo-video/`) are ignored.
+The published demo video is kept at `docs/flare-demo.mp4`.
+
 | Command                              | Purpose                                                                                  |
 | ------------------------------------ | ---------------------------------------------------------------------------------------- |
 | `npm test`                           | API, request lifecycle, events, geometry, scenario integrity and weather tests           |
@@ -196,7 +204,7 @@ docs/                     Architecture, scenarios, walkthrough, references and s
 
 The browser walkthrough checks the citizen/responder lifecycle, map layers, all four areas, contextual notes, mobile layouts and connection failures. It also produces the screenshots shown here. See [architecture and maintenance notes](docs/ARCHITECTURE.md) and [contribution guidance](CONTRIBUTING.md).
 
-The [latest review record](docs/VALIDATION.md) reports **84 passing tests** and **21 passing browser steps**, including the live Vercel deployment, with the scope and remaining limits stated alongside the results.
+The [latest review record](docs/VALIDATION.md) reports **101 passing tests** and **23 passing browser steps** against the local production build, plus read-only security checks of the live Vercel deployment. The record states the scope and remaining limits alongside the results.
 
 ## Current limits
 

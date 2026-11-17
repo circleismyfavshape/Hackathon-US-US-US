@@ -1,6 +1,36 @@
 # Review and verification record
 
-Reviewed 16 November 2026 on Windows, using Node.js 24.16.0 and Playwright 1.65.1 with Chromium.
+## Cleanup and security review: 17 November 2026
+
+Checked on Windows with Node.js 24.16.0 and Playwright 1.65.1 with Chromium.
+
+| Check                                                            | Result                                                                                                                                                     |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                                                       | 101 tests passed across 13 suites                                                                                                                          |
+| `npm run build`                                                  | Production client build and both workspace typechecks passed                                                                                               |
+| `npm run format:check` and `git diff --check`                    | Passed                                                                                                                                                     |
+| `node tools/e2e.mjs` against a dedicated local production server | All 23 browser steps passed                                                                                                                                |
+| Gitleaks 8.30.1                                                  | No secrets detected in available Git history, including merge diffs, scanned working files, production client output or downloaded deployed JavaScript/CSS |
+| `npm audit`                                                      | Zero known vulnerabilities reported                                                                                                                        |
+| Live deployment, read-only probes                                | Health endpoint responded; common environment/source paths returned the app HTML fallback; request list was publicly readable                              |
+| Documentation and UI                                             | Changed document links resolved; request and profile screenshots inspected                                                                                 |
+
+Removed optional tracked VS Code settings, expanded ignore rules for local artifacts and credential
+files, and added public-demo privacy notices. Useful project dotfiles, source, fixtures, tests,
+documentation and the published video remain. Local video-production files were preserved and ignored.
+The walkthrough used in-memory state and saved screenshots outside the repository; no live requests
+were created, changed or reset during this review.
+
+Redis credentials are used only by server code. The request API remains deliberately unauthenticated;
+requests and shared profiles are public demo data. Private Vercel/Upstash account settings and logs
+were not inspected. See [security and privacy](SECURITY.md) for the boundaries of this review.
+
+The build retains its existing warning about the large MapLibre chunk. No dependency or runtime
+workflow changes were needed.
+
+## Previous review: 16 November 2026
+
+The earlier review used Windows, Node.js 24.16.0 and Playwright 1.65.1 with Chromium.
 
 ## Results
 

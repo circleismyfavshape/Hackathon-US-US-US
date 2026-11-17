@@ -208,6 +208,10 @@ export function ProfileView({ scenario }: { scenario: Scenario }) {
             setDraft(null);
           }}
         >
+          <p className="fl-fine">
+            Public demo: use fictional details only. Requests and shared profiles are visible to all
+            visitors.
+          </p>
           {FIELDS.slice(0, 1).map(({ field, label }) => (
             <div className="fl-field" key={field}>
               <label htmlFor={`fl-profile-${field}`}>{label}</label>
@@ -324,8 +328,8 @@ export function ProfileView({ scenario }: { scenario: Scenario }) {
           </span>
         </p>
         <p className="fl-fine">
-          Simulation: this person is fictional and the avatar stands in for a photo. Changes are
-          kept on this device only.
+          Public demo: use fictional details only. Edits stay on this device until you share them
+          with a request. Requests and shared profiles are visible to all visitors.
         </p>
         {edited && (
           <button
