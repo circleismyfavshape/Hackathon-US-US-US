@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://flare-flood-response.vercel.app">Live demo</a> ·
+  <a href="docs/flare-demo.mp4">Demo video</a> ·
   <a href="#why-this-exists">The problem</a> ·
   <a href="#one-incident-two-perspectives">See the flow</a> ·
   <a href="#run-locally">Run locally</a> ·
