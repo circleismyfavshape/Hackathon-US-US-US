@@ -219,8 +219,14 @@ describe('SOS lifecycle', () => {
     ['bad locationMode', { locationMode: 'gps' }],
   ] as const) {
     test(`rejects ${name}`, async () => {
-      const body =
-        patch === undefined ? '' : typeof patch === 'string' ? patch : { ...validSos, ...patch };
+      let body: unknown;
+      if (patch === undefined) {
+        body = '';
+      } else if (typeof patch === 'string') {
+        body = patch;
+      } else {
+        body = { ...validSos, ...patch };
+      }
       const r = await app.request('/api/sos', json('POST', body));
       assert.equal(r.status, 400);
       assert.equal(((await r.json()) as { error: string }).error, 'invalid SOS');

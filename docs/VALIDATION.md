@@ -1,5 +1,31 @@
 # Review and verification record
 
+## Readability review: 17 November 2026
+
+Reviewed client screens, shared helpers, server routes, Redis hosting, weather handling, scenario
+types, styling, configuration and test tools. The refactor keeps the demo workflows and API contract
+intact.
+
+- Split `Citizen.tsx` into a 417-line coordinator and focused guide, news, help, map-summary,
+  notification and request-tracking files under `client/src/flare/citizen/`.
+- Removed unused mapcn route, arc, cluster, GeoJSON, tooltip and standalone-popup components after
+  checking their references. The map, markers, popups and controls FLARE uses retain their upstream
+  license notice.
+- Replaced nested ternaries with explicit branches, named intermediate calculations and clarified
+  geometry, warning ordering, notification messages and live-refresh variables.
+- Kept comments focused on coordinate order, request lifetimes, shared storage and other constraints.
+  The Redis transaction script changed only in whitespace; its comparison and publish logic is intact.
+- Updated the architecture map and contribution guidance for human reviewers.
+
+Verification: all **101 tests across 13 suites** and all **23 browser steps** passed against a dedicated
+local production server. The production build, formatting check, diff check and both workspaces'
+TypeScript checks with `noUnusedLocals` and `noUnusedParameters` passed. Browser screenshots were
+saved outside the repository; the live Redis queue was untouched.
+
+The browser notification check now targets the dispatch banner by its text. Its earlier total-count
+assertion failed when a scheduled news banner arrived during the swipe check. The corrected check
+still verifies that a short drag keeps the dispatch banner and a long swipe removes it.
+
 ## Cleanup and security review: 17 November 2026
 
 Checked on Windows with Node.js 24.16.0 and Playwright 1.65.1 with Chromium.

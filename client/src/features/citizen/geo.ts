@@ -1,4 +1,5 @@
-// Pure geometry for the map and the danger-zone check. No React, no DOM. Tested in server/tests/citizen/.
+// Pure geometry for the map and the danger-zone check. No React, no DOM. Tested in
+// server/tests/citizen/.
 import type { FeatureCollection, Polygon } from 'geojson';
 import {
   ZONE_LEVELS,
@@ -12,45 +13,66 @@ import {
 
 export type ZoneHit = ZoneLevel | 'none';
 
-/** Ray casting. `ring` is GeoJSON order [lng, lat]; `p` is {lat, lng}. */
-export function pointInRing(p: LatLng, ring: Ring): boolean {
+/** Count crossings of a horizontal ray from the point. An odd count means it is inside. */
+export function pointInRing(point: LatLng, ring: Ring): boolean {
   let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i];
-    const [xj, yj] = ring[j];
+  for (let index = 0; index < ring.length; index++) {
+    const previousIndex = index === 0 ? ring.length - 1 : index - 1;
+    // GeoJSON coordinates use longitude first, unlike the point object.
+    const [startLng, startLat] = ring[index];
+    const [endLng, endLat] = ring[previousIndex];
     // Include the boundary: a point on a marked flood edge should still raise the alert.
-    const cross = (p.lng - xi) * (yj - yi) - (p.lat - yi) * (xj - xi);
+    const cross =
+      (point.lng - startLng) * (endLat - startLat) - (point.lat - startLat) * (endLng - startLng);
     const epsilon = 1e-10;
     if (
       Math.abs(cross) <= epsilon &&
-      p.lng >= Math.min(xi, xj) - epsilon &&
-      p.lng <= Math.max(xi, xj) + epsilon &&
-      p.lat >= Math.min(yi, yj) - epsilon &&
-      p.lat <= Math.max(yi, yj) + epsilon
+      point.lng >= Math.min(startLng, endLng) - epsilon &&
+      point.lng <= Math.max(startLng, endLng) + epsilon &&
+      point.lat >= Math.min(startLat, endLat) - epsilon &&
+      point.lat <= Math.max(startLat, endLat) + epsilon
     ) {
       return true;
     }
-    if (yi > p.lat !== yj > p.lat && p.lng < ((xj - xi) * (p.lat - yi)) / (yj - yi) + xi) {
-      inside = !inside;
+    const startIsAbove = startLat > point.lat;
+    const endIsAbove = endLat > point.lat;
+    if (startIsAbove !== endIsAbove) {
+      const crossingLng =
+        ((endLng - startLng) * (point.lat - startLat)) / (endLat - startLat) + startLng;
+      if (point.lng < crossingLng) {
+        inside = !inside;
+      }
     }
   }
   return inside;
 }
 
-/** Worst marked level containing `p`. Never means "safe": 'none' only says outside the drawn zones. */
-export function zoneAt(p: LatLng, zones: Zone[]): ZoneHit {
-  const hit = new Set(zones.filter((z) => pointInRing(p, z.coordinates)).map((z) => z.level));
-  return ZONE_LEVELS.find((l) => hit.has(l)) ?? 'none';
+/**
+ * Find the worst level at the point. 'none' means outside the drawn zones, not confirmed safe.
+ */
+export function zoneAt(point: LatLng, zones: Zone[]): ZoneHit {
+  // Levels are ordered from severe to moderate, so the first match wins.
+  for (const level of ZONE_LEVELS) {
+    const containsPoint = zones.some(
+      (zone) => zone.level === level && pointInRing(point, zone.coordinates),
+    );
+    if (containsPoint) {
+      return level;
+    }
+  }
+  return 'none';
 }
 
-/** The incident whose zones contain `p`, with the worst level there. Null when `p` is outside every marked zone. */
+/**
+ * Find the incident and worst zone at the point, or null outside every marked zone.
+ */
 export function dangerAt(
-  p: LatLng,
+  point: LatLng,
   incidents: Incident[],
 ): { incident: Incident; level: ZoneLevel; zone: Zone } | null {
   let best: { incident: Incident; level: ZoneLevel; zone: Zone } | null = null;
   for (const incident of incidents) {
-    const level = zoneAt(p, incident.zones);
+    const level = zoneAt(point, incident.zones);
     if (level === 'none') {
       continue;
     }
@@ -58,7 +80,9 @@ export function dangerAt(
       best = {
         incident,
         level,
-        zone: incident.zones.find((z) => z.level === level && pointInRing(p, z.coordinates))!,
+        zone: incident.zones.find(
+          (zone) => zone.level === level && pointInRing(point, zone.coordinates),
+        )!,
       };
     }
   }
@@ -77,12 +101,25 @@ export function distanceM(a: LatLng, b: LatLng): number {
 }
 
 export function nearest<T extends { location: LatLng }>(p: LatLng, items: T[]): T {
-  return items.reduce((best, it) =>
-    distanceM(p, it.location) < distanceM(p, best.location) ? it : best,
-  );
+  let closest = items[0];
+  if (!closest) {
+    throw new Error('Cannot find the nearest location in an empty list.');
+  }
+  let closestDistance = distanceM(p, closest.location);
+  for (const item of items.slice(1)) {
+    const distance = distanceM(p, item.location);
+    if (distance < closestDistance) {
+      closest = item;
+      closestDistance = distance;
+    }
+  }
+  return closest;
 }
 
-/** [[minLng, minLat], [maxLng, maxLat]] around every point, in the order MapLibre's `bounds` expects. */
+/**
+ * [[minLng, minLat], [maxLng, maxLat]] around every point, in the order MapLibre's `bounds`
+ * expects.
+ */
 export function boundsOf(points: LatLng[]): [[number, number], [number, number]] {
   const lats = points.map((p) => p.lat);
   const lngs = points.map((p) => p.lng);
@@ -109,27 +146,28 @@ export function zonesGeoJson(
   };
 }
 
-/** Every request snaps to a demo point, so many share one spot. Group them by nearest demo point (oldest first, as the API lists them). */
+/** Group requests by their nearest demo place, preserving the API's oldest-first order. */
 export function bucketByLocation<T extends { location: LatLng }>(
   items: T[],
   locations: { id: string; location: LatLng }[],
 ): Map<string, T[]> {
-  const out = new Map<string, T[]>(locations.map((l) => [l.id, []]));
+  const groups = new Map<string, T[]>(locations.map((location) => [location.id, []]));
   if (locations.length === 0) {
-    return out;
+    return groups;
   }
-  for (const it of items) {
-    out.get(nearest(it.location, locations).id)!.push(it);
+  for (const item of items) {
+    const place = nearest(item.location, locations);
+    groups.get(place.id)!.push(item);
   }
-  return out;
+  return groups;
 }
 
 export function countByStatus(items: { status: SosStatus }[]): Record<SosStatus, number> {
-  const c: Record<SosStatus, number> = { pending: 0, assigned: 0, resolved: 0 };
-  for (const it of items) {
-    c[it.status]++;
+  const counts: Record<SosStatus, number> = { pending: 0, assigned: 0, resolved: 0 };
+  for (const item of items) {
+    counts[item.status]++;
   }
-  return c;
+  return counts;
 }
 
 /** "450 m" under a kilometre, "1.6 km" above. */

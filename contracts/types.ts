@@ -104,7 +104,9 @@ export type Scenario = {
   defaultLocationId: string;
   demoBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number };
   demoTeams: string[];
-  /** The fictional person the demo phone belongs to. The app starts from it and lets them edit it. */
+  /**
+   * The fictional person the demo phone belongs to. The app starts from it and lets them edit it.
+   */
   demoProfile: CitizenProfile;
 };
 
@@ -162,7 +164,10 @@ export type Sos = SosCreate & {
 export type SosPatch =
   { status: 'assigned'; assignedTeam: string } | { status: 'resolved' } | { status: 'pending' };
 
-/** One item in the news feed. `sourceType` says whether it is a real official warning or part of the simulated scenario. */
+/**
+ * One item in the news feed. `sourceType` says whether it is a real official warning or part of
+ * the simulated scenario.
+ */
 export type Alert = {
   id: string;
   /** The simulated incident it belongs to; null for official warnings. */
@@ -181,7 +186,10 @@ export type Alert = {
   url: string | null;
 };
 
-/** Sent on GET /api/events (server-sent events) whenever something changes, so clients refetch at once. */
+/**
+ * Sent on GET /api/events (server-sent events) whenever something changes, so clients refetch at
+ * once.
+ */
 export type LiveEvent = { type: 'sos' | 'alerts' | 'reset' };
 
 export type ApiError = { error: string; details?: string[] };

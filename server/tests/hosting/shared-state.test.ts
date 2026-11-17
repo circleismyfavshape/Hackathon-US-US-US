@@ -12,9 +12,13 @@ class MemoryState implements SharedState {
     return this.value;
   }
   async compareAndSet(before: string | null, after: string, event: LiveEvent['type'] | null) {
-    if (this.value !== before) return false;
+    if (this.value !== before) {
+      return false;
+    }
     this.value = after;
-    if (event) this.events.push(event);
+    if (event) {
+      this.events.push(event);
+    }
     return true;
   }
   async subscribe(): Promise<Response> {

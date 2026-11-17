@@ -1,4 +1,5 @@
-// Phone view: the citizen app (or the responder console) inside a phone frame at real phone size. It is the same
+// Phone view: the citizen app (or the responder console) inside a phone frame at real phone size.
+// It is the same
 // live page in an iframe, so it scrolls and its notifications drop in at the top like push alerts.
 // The switches for role, device and simulated location stay in the viewer bar, outside the phone.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -16,17 +17,12 @@ const STATUS = 46;
 export function usePhoneScale(reserve: number) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
-    const fit = () =>
-      setScale(
-        Math.max(
-          0.45,
-          Math.min(
-            1,
-            (window.innerHeight - reserve) / (PHONE_H + 24),
-            (window.innerWidth - 48) / (PHONE_W + 24),
-          ),
-        ),
-      );
+    const fit = () => {
+      const heightScale = (window.innerHeight - reserve) / (PHONE_H + 24);
+      const widthScale = (window.innerWidth - 48) / (PHONE_W + 24);
+      // Shrink to fit both dimensions, but keep the phone readable on short screens.
+      setScale(Math.max(0.45, Math.min(1, heightScale, widthScale)));
+    };
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);

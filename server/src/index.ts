@@ -8,14 +8,15 @@ import { createMetAlerts, noOfficialAlerts } from './live/met.ts';
 import { DemoStore } from './store/store.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
-// Official MET Malaysia warnings are on unless FLARE_LIVE_ALERTS=0. If the network is down the feed simply has no official items.
+// Official weather is enabled by default. Its cache handles outages without blocking the demo.
 const live = process.env.FLARE_LIVE_ALERTS !== '0';
 const store = new DemoStore();
 const officialAlerts = live ? createMetAlerts() : noOfficialAlerts;
 const app = createApp(store, officialAlerts);
 watchFeed(store, officialAlerts);
 
-// `npm start` serves the built client from the same origin. index.html is read per request, so a rebuild needs no restart.
+// `npm start` serves the built client from the same origin. index.html is read per request, so a
+// rebuild needs no restart.
 const distDir = fileURLToPath(new URL('../../client/dist/', import.meta.url));
 if (existsSync(distDir)) {
   app.use('/assets/*', serveStatic({ root: distDir }));

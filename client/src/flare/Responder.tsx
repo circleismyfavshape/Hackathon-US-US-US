@@ -83,15 +83,25 @@ function Console({ scenario }: { scenario: Scenario }) {
       ),
     [live.list],
   );
-  const shown = useMemo(
-    () =>
-      sorted.filter((s) =>
-        filter === 'all' ? true : filter === 'open' ? s.status !== 'resolved' : s.status === filter,
-      ),
-    [sorted, filter],
-  );
+  const shown = useMemo(() => {
+    return sorted.filter((request) => {
+      if (filter === 'all') {
+        return true;
+      }
+      if (filter === 'open') {
+        return request.status !== 'resolved';
+      }
+      return request.status === filter;
+    });
+  }, [sorted, filter]);
   const selected = live.list.find((s) => s.id === selectedId) ?? null;
-  usePhoneFeature(selected ? 'dispatch' : pane === 'map' ? 'map' : 'requests');
+  let phoneFeature: 'dispatch' | 'map' | 'requests' = 'requests';
+  if (selected) {
+    phoneFeature = 'dispatch';
+  } else if (pane === 'map') {
+    phoneFeature = 'map';
+  }
+  usePhoneFeature(phoneFeature);
 
   // A request that no longer exists (the demo was reset) cannot stay selected.
   useEffect(() => {
@@ -117,6 +127,64 @@ function Console({ scenario }: { scenario: Scenario }) {
     { id: 'assigned', label: 'On the way', n: counts.assigned },
     { id: 'resolved', label: 'Resolved', n: counts.resolved },
   ];
+
+  const renderQueue = () => {
+    if (!live.loaded) {
+      return (
+        <LoadState
+          error={
+            live.ok ? null : 'Requests could not be loaded. Check the connection and try again.'
+          }
+          onRetry={live.refresh}
+        />
+      );
+    }
+    if (shown.length === 0) {
+      return (
+        <p className="fl-empty">
+          {live.list.length === 0
+            ? 'No requests yet. When a citizen sends one it appears here at once.'
+            : 'No requests match this filter.'}
+        </p>
+      );
+    }
+    return (
+      <ul className="fl-queue">
+        {shown.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              className="fl-qitem"
+              data-status={s.status}
+              aria-pressed={s.id === selectedId}
+              onClick={() => setSelectedId(s.id)}
+              data-testid="queue-item"
+            >
+              <span className="fl-qitem-top">
+                <strong>
+                  {TYPE_LABEL[s.type]} · {s.people} {s.people === 1 ? 'person' : 'people'}
+                </strong>
+                <StatusTag status={s.status} />
+              </span>
+              {s.profile && (
+                <span className="fl-qitem-who">
+                  <Avatar name={s.profile.name} size={22} />
+                  {s.profile.name}, {s.profile.age}
+                </span>
+              )}
+              <span className="fl-qitem-place">{placeOf(s, scenario)}</span>
+              <span className="fl-qitem-meta">
+                <span className="fl-id">{s.id}</span>
+                <span>
+                  {areaOf(s, scenario)} · {ago(s.createdAt, now)}
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
     <div className="fl-ops" data-pane={pane} data-detail={selected ? '' : undefined}>
@@ -169,55 +237,7 @@ function Console({ scenario }: { scenario: Scenario }) {
               Connection lost. Showing the last requests received; retrying.
             </p>
           )}
-          {!live.loaded ? (
-            <LoadState
-              error={
-                live.ok ? null : 'Requests could not be loaded. Check the connection and try again.'
-              }
-              onRetry={live.refresh}
-            />
-          ) : shown.length === 0 ? (
-            <p className="fl-empty">
-              {live.list.length === 0
-                ? 'No requests yet. When a citizen sends one it appears here at once.'
-                : 'No requests match this filter.'}
-            </p>
-          ) : (
-            <ul className="fl-queue">
-              {shown.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    className="fl-qitem"
-                    data-status={s.status}
-                    aria-pressed={s.id === selectedId}
-                    onClick={() => setSelectedId(s.id)}
-                    data-testid="queue-item"
-                  >
-                    <span className="fl-qitem-top">
-                      <strong>
-                        {TYPE_LABEL[s.type]} · {s.people} {s.people === 1 ? 'person' : 'people'}
-                      </strong>
-                      <StatusTag status={s.status} />
-                    </span>
-                    {s.profile && (
-                      <span className="fl-qitem-who">
-                        <Avatar name={s.profile.name} size={22} />
-                        {s.profile.name}, {s.profile.age}
-                      </span>
-                    )}
-                    <span className="fl-qitem-place">{placeOf(s, scenario)}</span>
-                    <span className="fl-qitem-meta">
-                      <span className="fl-id">{s.id}</span>
-                      <span>
-                        {areaOf(s, scenario)} · {ago(s.createdAt, now)}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {renderQueue()}
         </div>
       </section>
 

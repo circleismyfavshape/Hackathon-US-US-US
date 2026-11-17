@@ -13,9 +13,25 @@ import { Crash, usePath } from './flare/ui.tsx';
 
 const KNOWN = new Set(['/', '/citizen', '/responder', '/phone/citizen', '/phone/responder']);
 
+function pageForPath(path: string) {
+  switch (path) {
+    case '/citizen':
+      return <Citizen device="desktop" />;
+    case '/responder':
+      return <Responder device="desktop" />;
+    case '/phone/citizen':
+      return <Phone role="citizen" />;
+    case '/phone/responder':
+      return <Phone role="responder" />;
+    default:
+      return <Landing />;
+  }
+}
+
 export default function App() {
   const path = usePath();
-  // Old links (for example /recovery, which was removed) land on the front door instead of a blank page.
+  // Old links (for example /recovery, which was removed) land on the front door instead of a blank
+  // page.
   useEffect(() => {
     if (!KNOWN.has(path)) {
       window.history.replaceState(null, '', '/');
@@ -25,17 +41,7 @@ export default function App() {
   return (
     // Keyed by path: each view starts clean, so nothing from the last one can break the next.
     <Crash key={path} label="FLARE">
-      {path === '/citizen' ? (
-        <Citizen device="desktop" />
-      ) : path === '/responder' ? (
-        <Responder device="desktop" />
-      ) : path === '/phone/citizen' ? (
-        <Phone role="citizen" />
-      ) : path === '/phone/responder' ? (
-        <Phone role="responder" />
-      ) : (
-        <Landing />
-      )}
+      {pageForPath(path)}
     </Crash>
   );
 }

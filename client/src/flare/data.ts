@@ -1,5 +1,5 @@
-// Shared data hooks. Every view reads the same server through the typed API client, and refetches the moment
-// the server says something changed (shared/api.ts onLive), with slow polling underneath as a safety net.
+// Shared data loading and scenario helpers. Server events trigger refreshes;
+// polling keeps the views current when the event stream is unavailable.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   api,
@@ -19,7 +19,7 @@ import { dangerAt, distanceM } from '../features/citizen/geo.ts';
 export const errText = (e: unknown) =>
   e instanceof Error ? e.message : 'The service could not be reached.';
 
-/* ── Scenario (static until the demo is reset) ────────────────────── */
+/* Scenario (static until the demo is reset) */
 export function useScenario() {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function useScenario() {
   return { scenario, error, reload: load };
 }
 
-/* ── Live resources ───────────────────────────────────────────────── */
+/* Live resources */
 /** Fetches now, whenever the server announces one of `on`, when the tab becomes visible again, and on a slow timer
  *  (faster while the push stream is down). A slower earlier response can never overwrite a newer one. */
 function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial: T) {
@@ -72,21 +72,21 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     loaded: false,
     ok: true,
   });
-  const seq = useRef(0);
+  const requestSequence = useRef(0);
   const active = useRef(false);
   const fetchRef = useRef(fetcher);
   fetchRef.current = fetcher;
   const types = on.join(',');
 
   const refresh = useCallback(async () => {
-    const mine = ++seq.current;
+    const currentRequest = ++requestSequence.current;
     try {
       const data = await fetchRef.current();
-      if (active.current && mine === seq.current) {
+      if (active.current && currentRequest === requestSequence.current) {
         setState({ data, loaded: true, ok: true });
       }
     } catch {
-      if (active.current && mine === seq.current) {
+      if (active.current && currentRequest === requestSequence.current) {
         setState((s) => ({ ...s, ok: false }));
       }
     }
@@ -129,7 +129,7 @@ function useLive<T>(fetcher: () => Promise<T>, on: LiveEvent['type'][], initial:
     return () => {
       stopped = true;
       active.current = false;
-      seq.current++;
+      requestSequence.current++;
       clearTimeout(timer);
       off();
       document.removeEventListener('visibilitychange', onVisible);
@@ -148,7 +148,10 @@ export function useSosList() {
   return { list: data, ...rest };
 }
 
-/** The news feed: official warnings first, then simulated scenario updates, newest first within each. */
+/**
+ * The news feed: official warnings first, then simulated scenario updates, newest first within
+ * each.
+ */
 export function useAlerts() {
   const { data, ...rest } = useLive(api.alerts, ['alerts'], NO_ALERTS);
   return { alerts: data, ...rest };
@@ -161,8 +164,8 @@ export function useArrivals<T extends { id: string }>(
   onNew: (item: T) => void,
 ) {
   const seen = useRef<Set<string> | null>(null);
-  const cb = useRef(onNew);
-  cb.current = onNew;
+  const onNewRef = useRef(onNew);
+  onNewRef.current = onNew;
   useEffect(() => {
     if (!loaded) {
       return;
@@ -174,31 +177,31 @@ export function useArrivals<T extends { id: string }>(
     for (const it of items) {
       if (!seen.current.has(it.id)) {
         seen.current.add(it.id);
-        cb.current(it);
+        onNewRef.current(it);
       }
     }
   }, [items, loaded]);
 }
 
-/* ── Simulated location ───────────────────────────────────────────────
+/* Simulated location.
    In this demo "where the phone is" is one of the scenario's demo places. The tester picks it in the bar outside
    the phone; the app inside the phone (an iframe) hears the change through localStorage. */
 const LOC_KEY = 'flare.location';
 const LOC_EVENT = 'flare:location';
 const safeStorage = {
-  get: (k: string) => {
+  get: (key: string) => {
     try {
-      return localStorage.getItem(k);
+      return localStorage.getItem(key);
     } catch {
       return null;
     }
   },
-  set: (k: string, v: string | null) => {
+  set: (key: string, value: string | null) => {
     try {
-      if (v === null) {
-        localStorage.removeItem(k);
+      if (value === null) {
+        localStorage.removeItem(key);
       } else {
-        localStorage.setItem(k, v);
+        localStorage.setItem(key, value);
       }
     } catch {
       /* private mode: the value just lasts for this page */
@@ -239,7 +242,7 @@ export function useDemoLocation(
   return [location, choose];
 }
 
-/* ── What the app knows about where you are ───────────────────────── */
+/* What the app knows about where you are */
 export type SafeOption = {
   shelter: Shelter;
   route: Route | null;
@@ -261,27 +264,33 @@ const WALK_M_PER_MIN = 75;
 export function situationAt(scenario: Scenario, location: DemoLocation): Situation {
   const danger = dangerAt(location.location, scenario.incidents);
   const incidentId = danger?.incident.id ?? location.incidentId;
-  const pool = scenario.shelters.filter((s) => s.incidentId === incidentId);
-  const options = (pool.length ? pool : scenario.shelters)
+  const nearbyShelters = scenario.shelters.filter((s) => s.incidentId === incidentId);
+  const options = (nearbyShelters.length ? nearbyShelters : scenario.shelters)
     .map((shelter): SafeOption => {
       const route =
         scenario.routes.find(
           (r) => r.fromLocationId === location.id && r.shelterId === shelter.id,
         ) ?? null;
       const straight = distanceM(location.location, shelter.location);
+      // When no stored route exists, estimate a longer walking distance than the straight line.
+      const estimatedDistance = straight * 1.3;
       return {
         shelter,
         route,
-        distanceM: route?.distanceM ?? Math.round(straight * 1.3),
-        minutes: route?.minutes ?? Math.max(1, Math.ceil((straight * 1.3) / WALK_M_PER_MIN)),
+        distanceM: route?.distanceM ?? Math.round(estimatedDistance),
+        minutes: route?.minutes ?? Math.max(1, Math.ceil(estimatedDistance / WALK_M_PER_MIN)),
       };
     })
-    // Relief points first, quickest first. Medical points come after: they are for injuries, not for shelter.
-    .sort(
-      (a, b) =>
-        Number(a.shelter.kind === 'medical') - Number(b.shelter.kind === 'medical') ||
-        a.minutes - b.minutes,
-    );
+    // Relief points first, quickest first. Medical points come after: they are for injuries, not
+    // for shelter.
+    .sort((first, second) => {
+      const firstIsMedical = first.shelter.kind === 'medical';
+      const secondIsMedical = second.shelter.kind === 'medical';
+      if (firstIsMedical !== secondIsMedical) {
+        return firstIsMedical ? 1 : -1;
+      }
+      return first.minutes - second.minutes;
+    });
   const near =
     scenario.incidents
       .map((i) => ({ area: i.area, id: i.id, metres: distanceM(location.location, i.location) }))
@@ -289,7 +298,7 @@ export function situationAt(scenario: Scenario, location: DemoLocation): Situati
   return { location, danger, options, nearestFlood: near };
 }
 
-/* ── Words and colours shared by every view ───────────────────────── */
+/* Words and colours shared by every view */
 export const LEVEL_COLOR: Record<ZoneLevel, string> = {
   severe: '#dc2626',
   high: '#ea580c',
@@ -340,7 +349,7 @@ export const clockMY = (d: string | number | Date) =>
     timeZone: 'Asia/Kuala_Lumpur',
   });
 
-/** Re-renders once a minute so "4 min ago" stays true. */
+/** Refresh relative timestamps every thirty seconds by default. */
 export function useNow(ms = 30_000) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {

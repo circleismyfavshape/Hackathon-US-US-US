@@ -17,16 +17,15 @@ const fixturesPath = fileURLToPath(
   new URL('../../../contracts/demo-fixtures.json', import.meta.url),
 );
 
-/** Fresh deep copy every call, so store resets never share references with the seed.
- *  Incident times are stored as "minutes ago" and resolved against `now`, so the scenario always reads as current. */
+/** Read a fresh fixture for each reset, with incident times relative to the new start time. */
 export function loadFixtures(now = Date.now()): DemoFixtures {
   const { _note, incidents, ...rest } = JSON.parse(
     readFileSync(fixturesPath, 'utf8'),
   ) as RawFixtures;
   return {
     ...rest,
-    incidents: incidents.map(({ updatedMinutesAgo, ...i }) => ({
-      ...i,
+    incidents: incidents.map(({ updatedMinutesAgo, ...incident }) => ({
+      ...incident,
       updatedAt: new Date(now - updatedMinutesAgo * 60_000).toISOString(),
     })),
   };

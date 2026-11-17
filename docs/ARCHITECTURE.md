@@ -6,7 +6,7 @@ The API client checks the core scenario response before rendering. Operational m
 
 ## Follow a request
 
-1. `Citizen.tsx` sends a `SosCreate` through `shared/api.ts`. Optional note text is normalised by server validation.
+1. `flare/citizen/Help.tsx` sends a `SosCreate` through `shared/api.ts`. Optional note text is normalised by server validation.
 2. `server/src/routes/validate.ts` checks fields, bounds and coordinate precision.
 3. `DemoStore.createSos` creates the ID and timestamps, stores the request and emits a change event.
 4. The SSE route in `server/src/app.ts` forwards the event to connected clients.
@@ -17,19 +17,26 @@ The store caps requests at 500. Local requests clear on process restart or reset
 
 ## Source map
 
-| File                               | Responsibility                                                          |
-| ---------------------------------- | ----------------------------------------------------------------------- |
-| `client/src/App.tsx`               | Route selection and top-level error boundary                            |
-| `flare/Citizen.tsx`                | Guide, map, news and help workflows                                     |
-| `flare/Responder.tsx`              | Queue filters, request detail and dispatch actions                      |
-| `flare/data.ts`                    | Shared loading, live refresh, scenario location and route choices       |
-| `flare/FlareMap.tsx`               | Flood geometry, camera, relief pins, route rendering and layer controls |
-| `flare/ScenarioLayers.tsx`         | Service popups and illustrated closure segments                         |
-| `flare/Phone.tsx`, `phoneNotes.ts` | Phone frame and feature-aware viewer notes                              |
-| `flare/ui.tsx`, `theme.css`        | Viewer controls, notifications, states and shared styles                |
-| `features/citizen/geo.ts`          | Pure point-in-polygon, distance and grouping helpers                    |
-| `server/src/live/met.ts`           | Warning parsing, caching, expiry and network failure handling           |
-| `server/src/seed/index.ts`         | Deep fixture loading and relative incident times                        |
+| File                                 | Responsibility                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `client/src/App.tsx`                 | Route selection and top-level error boundary                            |
+| `flare/Citizen.tsx`                  | Citizen tab selection, notifications and map coordination               |
+| `flare/citizen/Guide.tsx`            | Location-based guidance, relief choices and emergency contacts          |
+| `flare/citizen/News.tsx`             | Official and simulated feeds, filters and unread indicators             |
+| `flare/citizen/Help.tsx`             | Request submission and progress timeline                                |
+| `flare/citizen/MapCard.tsx`          | Summary and destination controls over the citizen map                   |
+| `flare/citizen/useCitizenRequest.ts` | The citizen's saved request ID, live refresh and reset handling         |
+| `flare/citizen/notifications.ts`     | News and request-status notification text                               |
+| `flare/Responder.tsx`                | Queue filters, request detail and dispatch actions                      |
+| `flare/data.ts`                      | Shared loading, live refresh, scenario location and route choices       |
+| `flare/FlareMap.tsx`                 | Flood geometry, camera, relief pins, route rendering and layer controls |
+| `flare/ScenarioLayers.tsx`           | Service popups and illustrated closure segments                         |
+| `flare/Phone.tsx`, `phoneNotes.ts`   | Phone frame and feature-aware viewer notes                              |
+| `flare/ui.tsx`, `theme.css`          | Viewer controls, notifications, states and shared styles                |
+| `features/citizen/geo.ts`            | Pure point-in-polygon, distance and grouping helpers                    |
+| `components/ui/map.tsx`              | Adapted mapcn map, marker, popup and control primitives used by FLARE   |
+| `server/src/live/met.ts`             | Warning parsing, caching, expiry and network failure handling           |
+| `server/src/seed/index.ts`           | Deep fixture loading and relative incident times                        |
 
 ## Lifecycles and failure paths
 

@@ -1,10 +1,12 @@
-// End-to-end check of the whole FLARE story in a real browser, against a running server. It also retakes docs/screenshots.
+// End-to-end check of the whole FLARE story in a real browser, against a running server. It also
+// retakes docs/screenshots.
 //
 //   npm run build && PORT=8793 npm start -w server      (in one terminal)
 //   node tools/e2e.mjs                                   (in another)
 //
 // Install the browser once with: npx playwright install chromium
-// FLARE_TEST_URL overrides the server address; FLARE_SCREENSHOTS_DIR overrides the screenshot folder.
+// FLARE_TEST_URL overrides the server address; FLARE_SCREENSHOTS_DIR overrides the screenshot
+// folder.
 // The script resets the scenario before and after the run. Use a dedicated local test server.
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
@@ -224,7 +226,8 @@ try {
     assert.match(who, /Age 22/);
     assert.match(who, /red umbrella/);
     assert.match(who, /Asthma/);
-    // Contact details are one click away, and the dispatch button stays on screen without scrolling.
+    // Contact details are one click away, and the dispatch button stays on screen without
+    // scrolling.
     await ops.getByTestId('request-profile').getByText('Contact and other details').click();
     assert.match(await ops.getByTestId('request-profile').innerText(), /Rahman Idris \(father\)/);
     await ops.getByTestId('request-profile').getByText('Contact and other details').click();
@@ -253,24 +256,26 @@ try {
     await app
       .locator('[data-testid="sos-headline"]', { hasText: 'Team on the way' })
       .waitFor({ timeout: liveTimeout });
-    assert.match(await app.locator('.fl-toast').first().innerText(), /Help is on the way/);
+    const statusBanner = app.locator('.fl-toast').filter({ hasText: 'Help is on the way' });
+    await statusBanner.waitFor({ timeout: liveTimeout });
     await settle(page, 600);
     await page.screenshot({ path: `${shots}/07-phone-team-on-the-way.png` });
     // On the phone a notification is swiped away. A short drag puts it back; a long one clears it.
-    const banner = await app.locator('.fl-toast').first().boundingBox();
+    const banner = await statusBanner.boundingBox();
     const y = banner.y + banner.height / 2;
     const x = banner.x + banner.width / 2;
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x + 30, y, { steps: 4 });
     await page.mouse.up();
-    assert.equal(await app.locator('.fl-toast').count(), 1, 'a short drag keeps the notification');
-    assert.equal(await app.locator('.fl-toast-close').first().isVisible(), false);
+    // Scenario news can arrive during this step. Follow the dispatch banner, not the total count.
+    assert.equal(await statusBanner.count(), 1, 'a short drag keeps the notification');
+    assert.equal(await statusBanner.locator('.fl-toast-close').isVisible(), false);
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x + 160, y, { steps: 8 });
     await page.mouse.up();
-    await app.locator('.fl-toast').waitFor({ state: 'detached', timeout: 2000 });
+    await statusBanner.waitFor({ state: 'detached', timeout: 2000 });
     // Swiping it away must not have opened anything: the request screen is still showing.
     await app.getByTestId('sos-headline').waitFor();
   });

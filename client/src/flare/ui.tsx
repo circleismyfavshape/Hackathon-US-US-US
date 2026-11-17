@@ -1,5 +1,5 @@
-// Shared pieces: the viewer bar that sits OUTSIDE the product (role, device and simulated-location switches for
-// whoever is testing), notifications, small tags, and a crash screen.
+// Shared viewer controls, notifications, tags and error screens.
+// Role and device switches stay outside the simulated phone app.
 import '@fontsource-variable/geist';
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { LocateFixed, Monitor, RotateCcw, Smartphone, X } from 'lucide-react';
@@ -28,7 +28,7 @@ if (EMBEDDED) {
   document.documentElement.classList.add('fl-embedded');
 }
 
-/* ── Routing: a few paths, no library ─────────────────────────────── */
+/* Routing: a few paths, no library */
 const ROUTE_EVENT = 'flare:route';
 export function navigate(to: string) {
   if (to === window.location.pathname + window.location.search) {
@@ -52,7 +52,10 @@ export function usePath(): string {
   return path.replace(/\/+$/, '') || '/';
 }
 
-/** An in-app link: plain href for new tabs and assistive tech, client-side navigation on a normal click. */
+/**
+ * An in-app link: plain href for new tabs and assistive tech, client-side navigation on a normal
+ * click.
+ */
 export function Link({
   to,
   children,
@@ -85,7 +88,7 @@ export function Link({
   );
 }
 
-/* ── Viewer bar ────────────────────────────────────────────────────── */
+/* Viewer bar */
 export type Role = 'citizen' | 'responder';
 export type Device = 'phone' | 'desktop';
 export const viewPath = (role: Role, device: Device) =>
@@ -100,7 +103,10 @@ type ViewerProps = {
   children: ReactNode;
 };
 
-/** The bar around the product. Inside the phone frame it renders nothing: a real app has no "switch to responder" button. */
+/**
+ * The bar around the product. Inside the phone frame it renders nothing: a real app has no
+ * "switch to responder" button.
+ */
 export function Viewer({ role, device, scenario, location, onLocation, children }: ViewerProps) {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -261,7 +267,7 @@ export function Viewer({ role, device, scenario, location, onLocation, children 
   );
 }
 
-/* ── Tags ──────────────────────────────────────────────────────────── */
+/* Tags */
 export const STATUS_LABEL: Record<SosStatus, string> = {
   pending: 'Waiting for a team',
   assigned: 'Team on the way',
@@ -311,7 +317,7 @@ export function LevelTag({ level }: { level: ZoneLevel }) {
   );
 }
 
-/* ── Notifications (phone-style banners at the top) ───────────────── */
+/* Notifications (phone-style banners at the top) */
 export type Toast = {
   id: string;
   title: string;
@@ -339,12 +345,18 @@ export function useToasts() {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
   const push = useCallback(
-    (t: Toast) => {
-      setToasts((cur) => (cur.some((x) => x.id === t.id) ? cur : [t, ...cur].slice(0, 3)));
-      clearTimeout(timers.current.get(t.id));
+    (toast: Toast) => {
+      setToasts((current) => {
+        if (current.some((item) => item.id === toast.id)) {
+          return current;
+        }
+        // Keep the newest three banners visible without duplicating an existing one.
+        return [toast, ...current].slice(0, 3);
+      });
+      clearTimeout(timers.current.get(toast.id));
       timers.current.set(
-        t.id,
-        setTimeout(() => dismiss(t.id), 8000),
+        toast.id,
+        setTimeout(() => dismiss(toast.id), 8000),
       );
     },
     [dismiss],
@@ -474,7 +486,7 @@ function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: string) => 
   );
 }
 
-/* ── States ────────────────────────────────────────────────────────── */
+/* States */
 export function LoadState({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   return (
     <div className="fl-state" role={error ? 'alert' : 'status'}>
@@ -496,7 +508,10 @@ export function LoadState({ error, onRetry }: { error: string | null; onRetry: (
   );
 }
 
-/** Catches a render error anywhere below it, so one broken part shows a way back instead of a blank page. */
+/**
+ * Catches a render error anywhere below it, so one broken part shows a way back instead of a
+ * blank page.
+ */
 export class Crash extends Component<{ children: ReactNode; label?: string }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {

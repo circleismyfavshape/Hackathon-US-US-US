@@ -6,7 +6,7 @@ import { noOfficialAlerts, type OfficialAlerts } from './live/met.ts';
 import { validateSosCreate, validateSosPatch } from './routes/validate.ts';
 import { DemoStore } from './store/store.ts';
 
-const bad = (c: Context, status: 400 | 404 | 409 | 500, error: string, details?: string[]) =>
+const apiError = (c: Context, status: 400 | 404 | 409 | 500, error: string, details?: string[]) =>
   c.json<ApiError>(details ? { error, details } : { error }, status);
 
 async function readJson(c: Context): Promise<unknown> {
@@ -17,7 +17,10 @@ async function readJson(c: Context): Promise<unknown> {
   }
 }
 
-/** The whole feed: official warnings first (real, sourced), then the simulated scenario updates. Each item says which it is. */
+/**
+ * The whole feed: official warnings first (real, sourced), then the simulated scenario updates.
+ * Each item says which it is.
+ */
 export async function feed(store: DemoStore, officialAlerts: OfficialAlerts): Promise<Alert[]> {
   const official = await officialAlerts().catch(() => []);
   return [...official, ...store.simulatedAlerts()];
@@ -48,8 +51,8 @@ export function createApp(
 
   app.get('/api/alerts', async (c) => c.json(await feed(store, officialAlerts)));
 
-  // Server-sent events: one small message whenever requests or the feed change, so every open page refetches at once
-  // instead of waiting for its next poll. Clients fall back to slow polling if this stream cannot be opened.
+  // Events tell each page to refetch when requests or the news feed change.
+  // Clients use polling when they cannot open this stream.
   app.get('/api/events', (c) => {
     c.header('cache-control', 'no-cache, no-transform');
     c.header('x-accel-buffering', 'no');
@@ -78,7 +81,8 @@ export function createApp(
             await stream.writeSSE({ event: 'change', data: JSON.stringify(next) });
             continue;
           }
-          // Wait for a change, then send a ping after 20 seconds of silence to keep proxies connected.
+          // Wait for a change, then send a ping after 20 seconds of silence to keep proxies
+          // connected.
           const timedOut = await new Promise<boolean>((resolve) => {
             const t = setTimeout(() => resolve(true), 20_000);
             wake = () => {
@@ -99,14 +103,14 @@ export function createApp(
   });
 
   app.post('/api/sos', async (c) => {
-    const v = validateSosCreate(await readJson(c), store.fixtures);
-    if (v.ok === false) {
-      return bad(c, 400, 'invalid SOS', v.details);
+    const validation = validateSosCreate(await readJson(c), store.fixtures);
+    if (validation.ok === false) {
+      return apiError(c, 400, 'invalid SOS', validation.details);
     }
     try {
-      return c.json(store.createSos(v.value), 201);
+      return c.json(store.createSos(validation.value), 201);
     } catch (e) {
-      return bad(c, 409, (e as Error).message);
+      return apiError(c, 409, (e as Error).message);
     }
   });
 
@@ -114,17 +118,17 @@ export function createApp(
   app.get('/api/sos', (c) => c.json(store.listSos()));
 
   app.get('/api/sos/:id', (c) => {
-    const s = store.getSos(c.req.param('id'));
-    return s ? c.json(s) : bad(c, 404, 'SOS not found');
+    const request = store.getSos(c.req.param('id'));
+    return request ? c.json(request) : apiError(c, 404, 'SOS not found');
   });
 
   app.patch('/api/sos/:id', async (c) => {
-    const v = validateSosPatch(await readJson(c));
-    if (v.ok === false) {
-      return bad(c, 400, 'invalid SOS update', v.details);
+    const validation = validateSosPatch(await readJson(c));
+    if (validation.ok === false) {
+      return apiError(c, 400, 'invalid SOS update', validation.details);
     }
-    const s = store.patchSos(c.req.param('id'), v.value);
-    return s ? c.json(s) : bad(c, 404, 'SOS not found');
+    const request = store.patchSos(c.req.param('id'), validation.value);
+    return request ? c.json(request) : apiError(c, 404, 'SOS not found');
   });
 
   // Demo-only reset: reseeds the scenario and clears all requests.
@@ -133,15 +137,14 @@ export function createApp(
     return c.json({ status: 'reset', mode: 'demo' });
   });
 
-  app.onError((_err, c) => bad(c, 500, 'internal error'));
+  app.onError((_err, c) => apiError(c, 500, 'internal error'));
   app.notFound((c) =>
-    c.req.path.startsWith('/api/') ? bad(c, 404, 'not found') : c.text('Not found', 404),
+    c.req.path.startsWith('/api/') ? apiError(c, 404, 'not found') : c.text('Not found', 404),
   );
   return app;
 }
 
-/** Watches the feed and tells subscribers when it changes: a simulated update was released, or an official warning arrived or expired.
- *  Runs only in the real server (index.ts), never in tests. Returns the stop function. */
+/** Watch for newly released or expired warnings. Return a function that stops the timer. */
 export function watchFeed(
   store: DemoStore,
   officialAlerts: OfficialAlerts,

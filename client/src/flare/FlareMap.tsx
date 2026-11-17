@@ -1,6 +1,5 @@
-// The one map every view uses. A tilted 3D scene: real buildings rise out of the street map, each flood zone is a
-// translucent block of water whose colour and height show its damage level, safe zones are green pins, and the
-// walking route to the chosen safe zone is drawn on the roads. Built on the mapcn <Map> (components/ui/map.tsx).
+// Shared 3D map: buildings, illustrated flood levels, relief pins and stored walking routes.
+// Map primitives come from components/ui/map.tsx; response posts and closures use ScenarioLayers.
 import {
   Component,
   useEffect,
@@ -35,19 +34,26 @@ import {
 import { LEVEL_COLOR, LEVEL_NAME, SEVERITY_COLOR, SEVERITY_NAME } from './data.ts';
 import { STATUS_COLOR, STATUS_SHORT } from './ui.tsx';
 
-// OpenFreeMap: free vector tiles with building heights, no key. If it cannot be reached the map falls back to a blank
+// OpenFreeMap: free vector tiles with building heights, no key. If it cannot be reached the map
+// falls back to a blank
 // canvas that still shows zones, pins and routes.
 const BASEMAP = 'https://tiles.openfreemap.org/styles/positron';
 const STYLES = { light: BASEMAP, dark: BASEMAP };
 
 const TILT = 56;
 const BEARING = -18;
-/** How tall each level's block of water is drawn, in metres. Exaggerated on purpose so levels read at a glance. */
+/**
+ * How tall each level's block of water is drawn, in metres. Exaggerated on purpose so levels read
+ * at a glance.
+ */
 const VOLUME_M: Record<ZoneLevel, number> = { severe: 16, high: 10, moderate: 5 };
 
 const css = (v: string) => ({ '--c': v }) as CSSProperties;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-/** The map can be removed while an effect is still queued (switching views). Nothing here is worth crashing for. */
+/**
+ * The map can be removed while an effect is still queued (switching views). Nothing here is worth
+ * crashing for.
+ */
 const safely = (fn: () => void) => {
   try {
     fn();
@@ -91,7 +97,7 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   }
 }
 
-/* ── Layers drawn inside the map ──────────────────────────────────── */
+/* Layers drawn inside the map */
 const SRC_ZONES = 'fl-zones';
 const SRC_ROUTE = 'fl-route';
 const LAYERS = [
@@ -156,7 +162,8 @@ function Layers({
         },
         firstLabel,
       );
-      // One layer per level: extrusion opacity cannot vary inside a layer. Widest level first, worst on top.
+      // One layer per level: extrusion opacity cannot vary inside a layer. Widest level first,
+      // worst on top.
       for (const level of [...ZONE_LEVELS].reverse()) {
         map.addLayer(
           {
@@ -354,7 +361,8 @@ function Camera({
     );
   }, [map, isLoaded, cameraKey, flat, pad]);
 
-  // The map's box changes size when panels open or the phone rotates. Keep the canvas matched to it.
+  // The map's box changes size when panels open or the phone rotates. Keep the canvas matched to
+  // it.
   useEffect(() => {
     if (!map) {
       return;
@@ -367,7 +375,7 @@ function Camera({
   return null;
 }
 
-/* ── The map ──────────────────────────────────────────────────────── */
+/* The map */
 type Props = {
   scenario: Scenario;
   /** The flood area to frame. Null frames every area. */
@@ -385,11 +393,20 @@ type Props = {
   onSelectRequest?: (id: string) => void;
   /** A still picture: no gestures, no controls. */
   preview?: boolean;
-  /** Open looking straight down instead of tilted. The person can still switch with the 2D/3D button. */
+  /**
+   * Open looking straight down instead of tilted. The person can still switch with the 2D/3D
+   * button.
+   */
   startFlat?: boolean;
-  /** Raise this number to switch an already open map to the flat view (for example when directions are asked for). */
+  /**
+   * Raise this number to switch an already open map to the flat view (for example when directions
+   * are asked for).
+   */
   flatRequest?: number;
-  /** Show the "Map layers" list and the police, fire and aid labels. Off when the person asked for a clear view. */
+  /**
+   * Show the "Map layers" list and the police, fire and aid labels. Off when the person asked for
+   * a clear view.
+   */
   showInfo?: boolean;
 };
 
@@ -484,21 +501,20 @@ export function FlareMap({
 
   // Requests share a few demo places, so fan them out around the spot instead of stacking them.
   const requestPins = useMemo(() => {
-    const seen: Record<string, number> = {};
-    return (requests ?? []).map((r) => {
-      const key = `${r.location.lat},${r.location.lng}`;
-      const n = (seen[key] = (seen[key] ?? -1) + 1);
-      const ring = Math.floor(n / 6) + 1;
-      const angle = (n % 6) * (Math.PI / 3) + ring * 0.5;
-      return {
-        r,
-        offset: (n === 0
-          ? [0, 0]
-          : [Math.round(Math.cos(angle) * 20 * ring), Math.round(Math.sin(angle) * 20 * ring)]) as [
-          number,
-          number,
-        ],
-      };
+    const counts: Record<string, number> = {};
+    return (requests ?? []).map((request) => {
+      const key = `${request.location.lat},${request.location.lng}`;
+      const overlapIndex = counts[key] ?? 0;
+      counts[key] = overlapIndex + 1;
+
+      let offset: [number, number] = [0, 0];
+      if (overlapIndex > 0) {
+        // Use six angular positions per ring, expanding outward as more pins overlap.
+        const ring = Math.floor(overlapIndex / 6) + 1;
+        const angle = (overlapIndex % 6) * (Math.PI / 3) + ring * 0.5;
+        offset = [Math.round(Math.cos(angle) * 20 * ring), Math.round(Math.sin(angle) * 20 * ring)];
+      }
+      return { request, offset };
     });
   }, [requests]);
 
@@ -609,24 +625,24 @@ export function FlareMap({
           })}
 
           {/* Responder: one dot per request */}
-          {requestPins.map(({ r, offset }) => (
+          {requestPins.map(({ request, offset }) => (
             <MapMarker
-              key={r.id}
-              longitude={r.location.lng}
-              latitude={r.location.lat}
+              key={request.id}
+              longitude={request.location.lng}
+              latitude={request.location.lat}
               offset={offset}
-              onClick={() => onSelectRequest?.(r.id)}
+              onClick={() => onSelectRequest?.(request.id)}
             >
               <MarkerContent>
                 <button
                   type="button"
                   className="fl-req"
-                  data-status={r.status}
-                  data-on={r.id === selectedRequestId || undefined}
-                  style={css(STATUS_COLOR[r.status])}
-                  aria-label={`Request ${r.id}, ${STATUS_SHORT[r.status]}, ${r.people} people`}
+                  data-status={request.status}
+                  data-on={request.id === selectedRequestId || undefined}
+                  style={css(STATUS_COLOR[request.status])}
+                  aria-label={`Request ${request.id}, ${STATUS_SHORT[request.status]}, ${request.people} people`}
                 >
-                  {r.people}
+                  {request.people}
                 </button>
               </MarkerContent>
             </MapMarker>

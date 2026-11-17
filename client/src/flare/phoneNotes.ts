@@ -71,7 +71,7 @@ export const PHONE_NOTES: Record<PhoneFeature, { title: string; body: string; ti
   },
 };
 
-/** Notify only the same-origin parent that owns this iframe. Never send location or request data. */
+/** Tell the same-origin phone viewer which feature is open; send no personal data. */
 export function usePhoneFeature(feature: PhoneFeature) {
   useEffect(() => {
     if (window.parent !== window) {

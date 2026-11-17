@@ -60,7 +60,10 @@ export class DemoStore {
     this.emit('reset');
   }
 
-  /** Simulated scenario updates released so far, newest first. They are released over time after start or reset. */
+  /**
+   * Simulated scenario updates released so far, newest first. They are released over time after
+   * start or reset.
+   */
   simulatedAlerts(now = Date.now()): Alert[] {
     const elapsed = (now - this.startedAt) / 1000;
     return this.fixtures.alerts

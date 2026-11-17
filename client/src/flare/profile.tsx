@@ -1,6 +1,4 @@
-// The citizen's profile: who they are, so a responder knows who to look for and who they are talking to.
-// The demo starts from the scenario's fictional person. Edits are kept on this device only, and the profile
-// leaves it only as part of a request the person chose to share it with.
+// Start with the fictional demo profile. Edits stay in browser storage until shared with a request.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Pencil, ShieldCheck, X } from 'lucide-react';
 import type { CitizenProfile, Scenario } from '../shared/api.ts';
@@ -55,7 +53,7 @@ function readStored(): Partial<CitizenProfile> | null {
   }
 }
 
-/** Keeps only well-formed saved values, so a damaged or outdated saved profile can never break a request. */
+/** Ignore invalid saved fields so old browser data cannot break request submission. */
 function merge(base: CitizenProfile, saved: Partial<CitizenProfile> | null): CitizenProfile {
   if (!saved) {
     return base;
@@ -76,7 +74,7 @@ function merge(base: CitizenProfile, saved: Partial<CitizenProfile> | null): Cit
   return next;
 }
 
-/** The profile on this device, with save and reset. Other open views of the app follow a change at once. */
+/** Save profile edits locally and keep other open views in sync. */
 export function useProfile(scenario: Scenario) {
   const [saved, setSaved] = useState(readStored);
   useEffect(() => {
@@ -97,7 +95,7 @@ export function useProfile(scenario: Scenario) {
   return { profile, save, edited: saved !== null };
 }
 
-/* ── Avatar ────────────────────────────────────────────────────────── */
+/* Avatar */
 const AVATAR_COLOURS = ['#2563eb', '#7c3aed', '#0891b2', '#0f766e', '#c2410c', '#be185d'];
 
 const initials = (name: string) =>
@@ -109,7 +107,7 @@ const initials = (name: string) =>
     .map((word) => word[0]?.toUpperCase() ?? '')
     .join('') || '?';
 
-/** A drawn avatar: the person's initials on a colour chosen from their name. Stands in for a photo in the demo. */
+/** Use initials and a repeatable colour as the demo avatar. */
 export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
   let hash = 0;
   for (const char of name) {
@@ -132,7 +130,7 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
   );
 }
 
-/* ── What a responder sees ─────────────────────────────────────────── */
+/* What a responder sees */
 /** The shared profile as a responder reads it. What a team needs on the way (who, how to spot them, medical
  *  notes) is always showing; contact details open on request, so the dispatch controls stay in view. */
 export function ProfileCard({ profile }: { profile: CitizenProfile }) {
@@ -180,7 +178,7 @@ export function ProfileCard({ profile }: { profile: CitizenProfile }) {
   );
 }
 
-/* ── The citizen's own profile screen ──────────────────────────────── */
+/* The citizen's own profile screen */
 export function ProfileView({ scenario }: { scenario: Scenario }) {
   const { profile, save, edited } = useProfile(scenario);
   const [draft, setDraft] = useState<(Omit<CitizenProfile, 'age'> & { age: string }) | null>(null);

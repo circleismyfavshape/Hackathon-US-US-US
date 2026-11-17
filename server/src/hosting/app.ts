@@ -6,6 +6,8 @@ import { noOfficialAlerts, type OfficialAlerts } from '../live/met.ts';
 import { DemoStore, type DemoSnapshot } from '../store/store.ts';
 import type { SharedState } from './redis.ts';
 
+const MAX_WRITE_ATTEMPTS = 8;
+
 /** Translate Redis's event stream without exposing its URL or token to the browser. */
 export function subscriptionEvent(line: string): 'ready' | LiveEvent['type'] | null {
   if (!line.startsWith('data:')) {
@@ -18,7 +20,9 @@ export function subscriptionEvent(line: string): 'ready' | LiveEvent['type'] | n
   if (!data.startsWith('message,')) {
     return null;
   }
-  const payload = data.slice(data.indexOf(',', 8) + 1);
+  // Redis sends "message,<channel>,<JSON>". The JSON itself may contain commas.
+  const channelEnd = data.indexOf(',', 'message,'.length);
+  const payload = data.slice(channelEnd + 1);
   try {
     const event = JSON.parse(payload) as LiveEvent;
     return ['sos', 'reset', 'alerts'].includes(event.type) ? event.type : null;
@@ -41,7 +45,8 @@ export function createHostedApp(
     streamSSE(c, async (stream) => {
       const controller = new AbortController();
       stream.onAbort(() => controller.abort());
-      // Finish before the function deadline; EventSource reconnects and resynchronizes automatically.
+      // Finish before the function deadline; EventSource reconnects and resynchronizes
+      // automatically.
       const deadline = setTimeout(() => controller.abort(), 25_000);
       let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
       let stopFeed: (() => void) | undefined;
@@ -89,8 +94,10 @@ export function createHostedApp(
   );
 
   app.all('/api/*', async (c) => {
-    // Reuse the validated local API. Retry a mutation only if another instance committed first.
-    for (let attempt = 0; attempt < 8; attempt++) {
+    const isWrite = ['POST', 'PATCH', 'DELETE'].includes(c.req.method);
+    // Each Vercel instance starts from the same saved snapshot. A write succeeds only if that
+    // snapshot is still current; otherwise, reload and apply the request to the newer state.
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
       let before = await state.read();
       if (before === null) {
         const initial = JSON.stringify(new DemoStore().snapshot());
@@ -101,7 +108,7 @@ export function createHostedApp(
       }
       const store = new DemoStore(JSON.parse(before) as DemoSnapshot);
       const response = await createApp(store, officialAlerts).fetch(c.req.raw.clone());
-      if (!response.ok || !['POST', 'PATCH', 'DELETE'].includes(c.req.method)) {
+      if (!response.ok || !isWrite) {
         return response;
       }
       const event = c.req.path === '/api/demo/reset' ? 'reset' : 'sos';

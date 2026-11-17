@@ -1,77 +1,44 @@
-// The citizen app. Phone first: it opens on a guide for where you are right now. Inside a marked flood zone that
-// guide is an emergency screen (what to do, who to call, the way to a safe zone); outside one it is a calm status.
-// Map, news and "request help" are one tap away on the tab bar. On a wide screen the same pieces sit beside the map.
+// Assemble the citizen tabs, notifications and map.
+// The individual screens and request tracking hook live in citizen/.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePhoneFeature } from './phoneNotes.ts';
 import {
-  ArrowRight,
-  Check,
-  ChevronRight,
-  Cross,
   Eye,
   EyeOff,
-  Footprints,
-  House,
   LifeBuoy,
   Map as MapIcon,
   MapPin,
-  Minus,
   Newspaper,
-  Package,
-  Phone as PhoneIcon,
-  Plus,
   ShieldCheck,
-  Stethoscope,
   TriangleAlert,
   UserRound,
-  Waves,
 } from 'lucide-react';
-import { metres, nearest } from '../features/citizen/geo.ts';
-import {
-  api,
-  liveConnected,
-  onLive,
-  type Alert,
-  type DemoLocation,
-  type Scenario,
-  type Sos,
-  type SosType,
-} from '../shared/api.ts';
+
+import type { Alert, DemoLocation, Scenario } from '../shared/api.ts';
 import { FlareMark } from '../shared/Logo.tsx';
 import {
-  ago,
-  clockMY,
-  errText,
   LEVEL_COLOR,
   LEVEL_NAME,
   safeStorage,
-  SEVERITY_COLOR,
-  SEVERITY_NAME,
   situationAt,
   useAlerts,
   useArrivals,
   useDemoLocation,
-  useNow,
   useScenario,
   type Situation,
 } from './data.ts';
 import { FlareMap, MapLegend } from './FlareMap.tsx';
-import { Avatar, ProfileView, useProfile } from './profile.tsx';
-import {
-  Crash,
-  LevelTag,
-  LoadState,
-  STATUS_LABEL,
-  Toasts,
-  TYPE_LABEL,
-  useToasts,
-  Viewer,
-  type Device,
-  type Toast,
-} from './ui.tsx';
+import { ProfileView } from './profile.tsx';
+import { Crash, LoadState, Toasts, useToasts, Viewer, type Device } from './ui.tsx';
+
+import { Guide } from './citizen/Guide.tsx';
+import { MapCard } from './citizen/MapCard.tsx';
+import { News } from './citizen/News.tsx';
+import { Help } from './citizen/Help.tsx';
+import { useCitizenRequest } from './citizen/useCitizenRequest.ts';
+import { alertToast, requestStatusToast } from './citizen/notifications.ts';
 
 type Tab = 'guide' | 'map' | 'news' | 'help' | 'profile';
-const SOS_KEY = 'flare.citizen.sosId';
 const SEEN_KEY = 'flare.citizen.newsSeenAt';
 
 export default function Citizen({ device }: { device: Device }) {
@@ -97,170 +64,91 @@ export default function Citizen({ device }: { device: Device }) {
 }
 
 function useWide() {
-  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 900px)').matches);
+  const [isWide, setWide] = useState(() => window.matchMedia('(min-width: 900px)').matches);
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 900px)');
-    const sync = () => setWide(mq.matches);
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
+    const mediaQuery = window.matchMedia('(min-width: 900px)');
+    const sync = () => setWide(mediaQuery.matches);
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
   }, []);
-  return wide;
-}
-
-/** The citizen's own request, kept across reloads, refreshed the moment the server reports a change. */
-function useMySos() {
-  const [id, setId] = useState<string | null>(() => safeStorage.get(SOS_KEY));
-  const [sos, setSos] = useState<Sos | null>(null);
-
-  useEffect(() => {
-    if (!id) {
-      return setSos(null);
-    }
-    let stopped = false;
-    let requestId = 0;
-    let timer: ReturnType<typeof setTimeout>;
-    const load = async () => {
-      const currentRequest = ++requestId;
-      try {
-        const next = await api.getSos(id);
-        if (!stopped && currentRequest === requestId) {
-          setSos(next);
-        }
-      } catch (e) {
-        // The server no longer knows this request (it was reset or restarted): stop tracking it.
-        if (
-          !stopped &&
-          currentRequest === requestId &&
-          e instanceof Error &&
-          'status' in e &&
-          (e as { status: number }).status === 404
-        ) {
-          safeStorage.set(SOS_KEY, null);
-          setId(null);
-        }
-      }
-    };
-    const loop = () => {
-      timer = setTimeout(
-        async () => {
-          if (stopped) {
-            return;
-          }
-          await load();
-          if (!stopped) {
-            loop();
-          }
-        },
-        liveConnected() ? 20_000 : 3000,
-      );
-    };
-    void load();
-    loop();
-    const off = onLive((type) => {
-      if (type !== 'alerts') {
-        void load();
-      }
-    });
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-      off();
-    };
-  }, [id]);
-
-  const track = useCallback((created: Sos) => {
-    safeStorage.set(SOS_KEY, created.id);
-    setSos(created);
-    setId(created.id);
-  }, []);
-  const clear = useCallback(() => {
-    safeStorage.set(SOS_KEY, null);
-    setId(null);
-    setSos(null);
-  }, []);
-  return { sos: id ? sos : null, track, clear };
+  return isWide;
 }
 
 function CitizenApp({ scenario, location }: { scenario: Scenario; location: DemoLocation }) {
-  const wide = useWide();
-  const sit = useMemo(() => situationAt(scenario, location), [scenario, location]);
+  const isWide = useWide();
+  const situation = useMemo(() => situationAt(scenario, location), [scenario, location]);
   const feed = useAlerts();
-  const my = useMySos();
+  const requestState = useCitizenRequest();
   const { toasts, push, dismiss } = useToasts();
   const [tab, setTab] = useState<Tab>('guide');
   usePhoneFeature(tab);
   const [shelterId, setShelterId] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(
-    sit.danger?.incident.id ?? location.incidentId,
+    situation.danger?.incident.id ?? location.incidentId,
   );
   const [seenAt, setSeenAt] = useState(() => safeStorage.get(SEEN_KEY) ?? '');
-  // Directions open flat, because a route is easiest to follow from straight above. The map tab itself opens in 3D.
+  // Directions open flat, because a route is easiest to follow from straight above. The map tab
+  // itself opens in 3D.
   const [routeView, setRouteView] = useState(false);
   const [flatRequest, setFlatRequest] = useState(0);
-  // The legend, the route card and the layer list can be hidden to leave the whole screen to the map.
+  // Hide all map annotations together when the person wants a clear view.
   const [mapInfo, setMapInfo] = useState(true);
 
-  const chosen = sit.options.find((o) => o.shelter.id === shelterId) ?? sit.options[0] ?? null;
-  const dangerId = sit.danger?.incident.id ?? null;
+  const destination =
+    situation.options.find((option) => option.shelter.id === shelterId) ??
+    situation.options[0] ??
+    null;
+  const dangerId = situation.danger?.incident.id ?? null;
   // A route is drawn when you are in danger, or when you picked a safe zone yourself.
-  const route = sit.danger || shelterId ? (chosen?.route ?? null) : null;
-  const go = useCallback(
-    (t: Tab) => {
-      if (t === 'map') {
+  const route = situation.danger || shelterId ? (destination?.route ?? null) : null;
+  const selectTab = useCallback(
+    (nextTab: Tab) => {
+      if (nextTab === 'map') {
         setRouteView(false);
       }
-      setTab(wide && t === 'map' ? 'guide' : t);
+      // The desktop guide already has the map beside it.
+      setTab(isWide && nextTab === 'map' ? 'guide' : nextTab);
     },
-    [wide],
+    [isWide],
   );
 
-  // Moving to a new place: start again from that place's guide. Entering a danger zone raises the alert.
-  const lastLoc = useRef(location.id);
+  // Moving to a new place: start again from that place's guide. Entering a danger zone raises the
+  // alert.
+  const previousLocation = useRef(location.id);
   useEffect(() => {
-    if (lastLoc.current === location.id) {
+    if (previousLocation.current === location.id) {
       return;
     }
-    dismiss(`danger-${lastLoc.current}`); // the alert for the place you just left no longer applies
-    lastLoc.current = location.id;
+    // The alert for the previous place no longer applies.
+    dismiss(`danger-${previousLocation.current}`);
+    previousLocation.current = location.id;
     setShelterId(null);
     setFocusId(dangerId ?? location.incidentId);
     setTab('guide');
-    if (sit.danger) {
+    if (situation.danger) {
+      const level = LEVEL_NAME[situation.danger.level].toLowerCase();
+      const area = situation.danger.incident.area;
       push({
         id: `danger-${location.id}`,
         tone: 'danger',
         title: 'EMERGENCY FLOOD',
-        body: `You are in a ${LEVEL_NAME[sit.danger.level].toLowerCase()} flood zone at ${sit.danger.incident.area}. Open for what to do.`,
+        body: `You are in a ${level} flood zone at ${area}. Open for what to do.`,
         meta: 'FLARE · Simulation',
       });
     }
-  }, [location.id, location.incidentId, dangerId, sit.danger, push, dismiss]);
+  }, [location.id, location.incidentId, dangerId, situation.danger, push, dismiss]);
 
-  // News: a banner for each new item. Official warnings loaded with the page are announced once per browser session.
+  // News: a banner for each new item. Official warnings loaded with the page are announced once
+  // per browser session.
   const openNews = useCallback(() => setTab('news'), []);
   const announce = useCallback(
-    (a: Alert) =>
-      push({
-        id: a.id,
-        tone:
-          a.sourceType === 'official'
-            ? 'info'
-            : a.kind === 'shelter'
-              ? 'good'
-              : a.kind === 'flood'
-                ? 'danger'
-                : 'info',
-        title: a.title,
-        body: a.text.length > 110 ? `${a.text.slice(0, 108).trimEnd()}…` : a.text,
-        meta: a.sourceType === 'official' ? `Official · ${a.source}` : `Simulated · ${a.source}`,
-        onClick: openNews,
-      }),
+    (alert: Alert) => push(alertToast(alert, openNews)),
     [push, openNews],
   );
   useArrivals(feed.alerts, feed.loaded, announce);
   const announcedOfficial = useRef(false);
-  const inDanger = useRef(Boolean(sit.danger));
-  inDanger.current = Boolean(sit.danger);
+  const inDanger = useRef(Boolean(situation.danger));
+  inDanger.current = Boolean(situation.danger);
   useEffect(() => {
     if (!feed.loaded || announcedOfficial.current) {
       return;
@@ -271,16 +159,17 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
     try {
       told = sessionStorage.getItem('flare.official.told');
     } catch {
-      /* private mode */
+      // Session storage can be unavailable in private browsing.
     }
-    // In a danger zone the first screen is for getting out. Weather news waits on the News tab (its dot shows it is there).
+    // In a danger zone the first screen is for getting out. Weather news waits on the News tab
+    // (its dot shows it is there).
     if (!top || told === top.id || inDanger.current) {
       return;
     }
     try {
       sessionStorage.setItem('flare.official.told', top.id);
     } catch {
-      /* private mode */
+      // Session storage can be unavailable in private browsing.
     }
     const t = setTimeout(() => announce(top), 2500);
     return () => clearTimeout(t);
@@ -289,40 +178,21 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
   // Your request: a banner when its status changes.
   const lastStatus = useRef<string | null>(null);
   useEffect(() => {
-    const s = my.sos;
-    if (!s) {
-      return void (lastStatus.current = null);
+    const request = requestState.sos;
+    if (!request) {
+      lastStatus.current = null;
+      return;
     }
-    const key = `${s.id}:${s.status}`;
-    if (lastStatus.current && lastStatus.current !== key && lastStatus.current.startsWith(s.id)) {
-      const t: Toast =
-        s.status === 'assigned'
-          ? {
-              id: key,
-              tone: 'good',
-              title: 'Help is on the way',
-              body: `${s.assignedTeam ?? 'A team'} has been sent to you.`,
-              meta: s.id,
-            }
-          : s.status === 'resolved'
-            ? {
-                id: key,
-                tone: 'good',
-                title: 'Request resolved',
-                body: 'The team marked your request as resolved.',
-                meta: s.id,
-              }
-            : {
-                id: key,
-                tone: 'info',
-                title: 'Request back in the queue',
-                body: 'Your request is waiting for a team again.',
-                meta: s.id,
-              };
-      push({ ...t, onClick: () => setTab('help') });
+    const key = `${request.id}:${request.status}`;
+    if (
+      lastStatus.current &&
+      lastStatus.current !== key &&
+      lastStatus.current.startsWith(request.id)
+    ) {
+      push({ ...requestStatusToast(request), onClick: () => setTab('help') });
     }
     lastStatus.current = key;
-  }, [my.sos, push]);
+  }, [requestState.sos, push]);
 
   // Unread dot on News.
   const newest = feed.alerts.reduce((m, a) => (a.at > m ? a.at : m), '');
@@ -343,20 +213,20 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
       setFocusId(dangerId ?? location.incidentId);
       setRouteView(true);
       setFlatRequest((count) => count + 1);
-      if (!wide) {
+      if (!isWide) {
         setTab('map');
       }
     },
-    [dangerId, location.incidentId, wide],
+    [dangerId, location.incidentId, isWide],
   );
   const openArea = useCallback(
     (id: string) => {
       setFocusId(id);
-      if (!wide) {
+      if (!isWide) {
         setTab('map');
       }
     },
-    [wide],
+    [isWide],
   );
 
   const map = (
@@ -370,9 +240,9 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
         onPickIncident={setFocusId}
         user={location}
         route={focusId === (dangerId ?? location.incidentId) ? route : null}
-        selectedShelterId={route ? chosen?.shelter.id : null}
+        selectedShelterId={route ? destination?.shelter.id : null}
         onSelectShelter={(id) => {
-          if (sit.options.some((o) => o.shelter.id === id)) {
+          if (situation.options.some((o) => o.shelter.id === id)) {
             setShelterId(id);
           }
         }}
@@ -381,9 +251,9 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
       {mapInfo && (
         <MapCard
           scenario={scenario}
-          sit={sit}
+          situation={situation}
           focusId={focusId}
-          chosen={route ? chosen : null}
+          destination={route ? destination : null}
           onBack={() => setFocusId(dangerId ?? location.incidentId)}
           onAll={() => setFocusId(null)}
           onPick={setShelterId}
@@ -402,41 +272,57 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
     </div>
   );
 
-  const body =
-    tab === 'news' ? (
-      <News
-        alerts={feed.alerts}
-        loaded={feed.loaded}
-        ok={feed.ok}
-        scenario={scenario}
-        nearId={dangerId ?? location.incidentId}
-        seenAt={seenAt}
-        onArea={openArea}
-        onRetry={feed.refresh}
-      />
-    ) : tab === 'profile' ? (
-      <ProfileView scenario={scenario} />
-    ) : tab === 'help' ? (
-      <Help scenario={scenario} sit={sit} sos={my.sos} onSent={my.track} onClear={my.clear} />
-    ) : (
-      <Guide
-        scenario={scenario}
-        sit={sit}
-        chosen={chosen}
-        onPick={setShelterId}
-        onRoute={showRoute}
-        onHelp={() => setTab('help')}
-        onArea={openArea}
-        hasRequest={Boolean(my.sos && my.sos.status !== 'resolved')}
-        preview={!wide}
-      />
-    );
+  let body;
+  switch (tab) {
+    case 'news':
+      body = (
+        <News
+          alerts={feed.alerts}
+          loaded={feed.loaded}
+          ok={feed.ok}
+          scenario={scenario}
+          nearId={dangerId ?? location.incidentId}
+          seenAt={seenAt}
+          onArea={openArea}
+          onRetry={feed.refresh}
+        />
+      );
+      break;
+    case 'profile':
+      body = <ProfileView scenario={scenario} />;
+      break;
+    case 'help':
+      body = (
+        <Help
+          scenario={scenario}
+          situation={situation}
+          sos={requestState.sos}
+          onSent={requestState.track}
+          onClear={requestState.clear}
+        />
+      );
+      break;
+    default:
+      body = (
+        <Guide
+          scenario={scenario}
+          situation={situation}
+          destination={destination}
+          onPick={setShelterId}
+          onRoute={showRoute}
+          onHelp={() => setTab('help')}
+          onArea={openArea}
+          hasRequest={Boolean(requestState.sos && requestState.sos.status !== 'resolved')}
+          preview={!isWide}
+        />
+      );
+  }
 
   const tabs: { id: Tab; label: string; Icon: typeof MapIcon; badge?: number | boolean }[] = [
     {
       id: 'guide',
-      label: sit.danger ? 'Emergency' : 'Home',
-      Icon: sit.danger ? TriangleAlert : ShieldCheck,
+      label: situation.danger ? 'Emergency' : 'Home',
+      Icon: situation.danger ? TriangleAlert : ShieldCheck,
     },
     { id: 'map', label: 'Map', Icon: MapIcon },
     { id: 'news', label: 'News', Icon: Newspaper, badge: unread },
@@ -444,17 +330,17 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
       id: 'help',
       label: 'Get help',
       Icon: LifeBuoy,
-      badge: Boolean(my.sos && my.sos.status !== 'resolved'),
+      badge: Boolean(requestState.sos && requestState.sos.status !== 'resolved'),
     },
     { id: 'profile', label: 'Profile', Icon: UserRound },
   ];
 
-  if (wide) {
+  if (isWide) {
     return (
       <div className="fl-desk">
         <Toasts toasts={toasts} dismiss={dismiss} />
         <aside className="fl-desk-side">
-          <AppBar location={location} sit={sit} />
+          <AppBar location={location} situation={situation} />
           <div className="fl-seg fl-desk-tabs" role="tablist">
             {tabs
               .filter((t) => t.id !== 'map')
@@ -464,7 +350,7 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
                   type="button"
                   role="tab"
                   aria-selected={tab === t.id}
-                  onClick={() => go(t.id)}
+                  onClick={() => selectTab(t.id)}
                 >
                   <t.Icon size={15} aria-hidden /> {t.label}
                   {Boolean(t.badge) && (
@@ -483,9 +369,9 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
   }
 
   return (
-    <div className="fl-phoneapp" data-danger={sit.danger?.level}>
+    <div className="fl-phoneapp" data-danger={situation.danger?.level}>
       <Toasts toasts={toasts} dismiss={dismiss} />
-      <AppBar location={location} sit={sit} />
+      <AppBar location={location} situation={situation} />
       <main className="fl-appmain" data-tab={tab} key={tab}>
         {tab === 'map' ? map : <div className="fl-scroll">{body}</div>}
       </main>
@@ -495,8 +381,8 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
             key={t.id}
             type="button"
             aria-current={tab === t.id ? 'page' : undefined}
-            data-tone={t.id === 'guide' && sit.danger ? 'danger' : undefined}
-            onClick={() => go(t.id)}
+            data-tone={t.id === 'guide' && situation.danger ? 'danger' : undefined}
+            onClick={() => selectTab(t.id)}
           >
             <span className="fl-tabicon">
               <t.Icon size={21} aria-hidden />
@@ -512,7 +398,7 @@ function CitizenApp({ scenario, location }: { scenario: Scenario; location: Demo
   );
 }
 
-function AppBar({ location, sit }: { location: DemoLocation; sit: Situation }) {
+function AppBar({ location, situation }: { location: DemoLocation; situation: Situation }) {
   return (
     <header className="fl-appbar">
       <span className="fl-appbar-brand">
@@ -522,772 +408,10 @@ function AppBar({ location, sit }: { location: DemoLocation; sit: Situation }) {
         <MapPin size={14} aria-hidden />
         <span>{location.label}</span>
         <i
-          style={{ background: sit.danger ? LEVEL_COLOR[sit.danger.level] : '#16a34a' }}
+          style={{ background: situation.danger ? LEVEL_COLOR[situation.danger.level] : '#16a34a' }}
           aria-hidden
         />
       </span>
     </header>
-  );
-}
-
-/* ── Guide ─────────────────────────────────────────────────────────── */
-type GuideProps = {
-  scenario: Scenario;
-  sit: Situation;
-  chosen: Situation['options'][number] | null;
-  onPick: (id: string) => void;
-  onRoute: (id?: string) => void;
-  onHelp: () => void;
-  onArea: (id: string) => void;
-  hasRequest: boolean;
-  preview: boolean;
-};
-
-function Guide({
-  scenario,
-  sit,
-  chosen,
-  onPick,
-  onRoute,
-  onHelp,
-  onArea,
-  hasRequest,
-  preview,
-}: GuideProps) {
-  const now = useNow();
-  const { danger, location } = sit;
-
-  if (!danger) {
-    return (
-      <>
-        <section className="fl-hero" data-tone="safe">
-          <span className="fl-hero-kicker">
-            <ShieldCheck size={16} aria-hidden /> No alert for your location
-          </span>
-          <h1>You are outside the marked flood zones</h1>
-          <p>
-            {sit.nearestFlood
-              ? `The nearest flood is ${sit.nearestFlood.area}, about ${metres(sit.nearestFlood.metres)} away.`
-              : 'No floods are marked right now.'}{' '}
-            This is not a promise that your street is dry. FLARE will alert you if your location
-            enters a flood zone.
-          </p>
-        </section>
-        <section className="fl-card">
-          <h2>Floods right now</h2>
-          <ul className="fl-rows">
-            {scenario.incidents.map((i) => (
-              <li key={i.id}>
-                <button type="button" className="fl-row" onClick={() => onArea(i.id)}>
-                  <span className="fl-row-icon" style={{ background: SEVERITY_COLOR[i.severity] }}>
-                    <Waves size={16} aria-hidden />
-                  </span>
-                  <span className="fl-row-text">
-                    <strong>{i.area}</strong>
-                    <small>
-                      {SEVERITY_NAME[i.severity]} · {i.summary}
-                    </small>
-                  </span>
-                  <ChevronRight size={18} aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section className="fl-card">
-          <h2>Be ready</h2>
-          <ul className="fl-ticks">
-            <li>
-              <Check size={16} aria-hidden /> Keep your phone charged and notifications on.
-            </li>
-            <li>
-              <Check size={16} aria-hidden /> Know your nearest safe zone before you need it.
-            </li>
-            <li>
-              <Check size={16} aria-hidden /> Keep ID, medicine and water where you can grab them.
-            </li>
-          </ul>
-          <button
-            type="button"
-            className="fl-btn fl-btn-block"
-            onClick={() => onRoute(chosen?.shelter.id)}
-            disabled={!chosen}
-          >
-            <Footprints size={16} aria-hidden /> Show my nearest safe zone
-          </button>
-        </section>
-        <Contacts scenario={scenario} onHelp={onHelp} />
-      </>
-    );
-  }
-
-  const steps = scenario.actions[danger.level];
-  return (
-    <>
-      <section className="fl-hero" data-tone={danger.level}>
-        <span className="fl-hero-kicker">
-          <TriangleAlert size={16} aria-hidden /> Flood emergency · {danger.incident.area}
-        </span>
-        <h1>You are inside a flood danger zone</h1>
-        <p>
-          <strong>{LEVEL_NAME[danger.level]} damage level.</strong> {danger.zone.depth}. Reported{' '}
-          {ago(danger.incident.updatedAt, now)} for {location.label}.
-        </p>
-        <div className="fl-hero-actions">
-          <a className="fl-btn fl-btn-white" href="tel:999" target="_top">
-            <PhoneIcon size={17} aria-hidden /> Call 999
-          </a>
-          <button type="button" className="fl-btn fl-btn-outline-white" onClick={onHelp}>
-            <LifeBuoy size={17} aria-hidden /> {hasRequest ? 'View my request' : 'Request rescue'}
-          </button>
-        </div>
-      </section>
-
-      <section className="fl-card">
-        <h2>Do this now</h2>
-        <ol className="fl-steps">
-          {steps.map((s) => (
-            <li key={s}>{s}</li>
-          ))}
-        </ol>
-      </section>
-
-      {chosen && (
-        <section className="fl-card">
-          <h2>Get to a safe zone</h2>
-          {preview && (
-            <button
-              type="button"
-              className="fl-minimap"
-              onClick={() => onRoute()}
-              aria-label="Open the map with the route to the safe zone"
-            >
-              <FlareMap
-                scenario={scenario}
-                focusId={danger.incident.id}
-                user={location}
-                route={chosen.route}
-                selectedShelterId={chosen.shelter.id}
-                preview
-              />
-              <span className="fl-minimap-cta">
-                Open map <ArrowRight size={14} aria-hidden />
-              </span>
-            </button>
-          )}
-          <ul className="fl-rows">
-            {sit.options.map((o, n) => {
-              const on = o.shelter.id === chosen.shelter.id;
-              const Icon = o.shelter.kind === 'medical' ? Cross : House;
-              return (
-                <li key={o.shelter.id}>
-                  <button
-                    type="button"
-                    className="fl-row"
-                    data-on={on || undefined}
-                    aria-pressed={on}
-                    onClick={() => onPick(o.shelter.id)}
-                  >
-                    <span className="fl-row-icon" data-safe>
-                      <Icon size={16} aria-hidden />
-                    </span>
-                    <span className="fl-row-text">
-                      <strong>{o.shelter.name}</strong>
-                      <small>
-                        <b>{o.minutes} min walk</b> · {metres(o.distanceM)}
-                        {n === 0 ? ' · Nearest shelter' : ''}
-                        {o.shelter.kind === 'medical' ? ' · Medical' : ''}
-                      </small>
-                      {on && <small>{o.shelter.note}</small>}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <button
-            type="button"
-            className="fl-btn fl-btn-primary fl-btn-block"
-            onClick={() => onRoute()}
-          >
-            <Footprints size={16} aria-hidden /> Show the route to{' '}
-            {chosen.shelter.name.split(',')[0]}
-          </button>
-          <p className="fl-fine">
-            Routes follow roads but do not avoid floods or marked closures. Access is not verified.
-            Do not enter floodwater.
-          </p>
-        </section>
-      )}
-
-      <Contacts scenario={scenario} onHelp={onHelp} />
-    </>
-  );
-}
-
-function Contacts({ scenario, onHelp }: { scenario: Scenario; onHelp: () => void }) {
-  return (
-    <section className="fl-card">
-      <h2>Who to contact</h2>
-      <ul className="fl-rows">
-        {scenario.contacts.map((c) => (
-          <li key={c.id}>
-            <a className="fl-row" href={`tel:${c.number.replace(/[^\d+]/g, '')}`} target="_top">
-              <span className="fl-row-icon" data-call>
-                <PhoneIcon size={16} aria-hidden />
-              </span>
-              <span className="fl-row-text">
-                <strong>
-                  {c.label} · {c.number}
-                </strong>
-                <small>{c.note}</small>
-              </span>
-            </a>
-          </li>
-        ))}
-        <li>
-          <button type="button" className="fl-row" onClick={onHelp}>
-            <span className="fl-row-icon" data-help>
-              <LifeBuoy size={16} aria-hidden />
-            </span>
-            <span className="fl-row-text">
-              <strong>Request help in the app</strong>
-              <small>Goes to the first responders' queue with your location</small>
-            </span>
-            <ChevronRight size={18} aria-hidden />
-          </button>
-        </li>
-      </ul>
-      <p className="fl-fine">
-        This is a simulation: a request sent here reaches the demo responder screen only. The phone
-        numbers are real. Call them only in a real emergency.
-      </p>
-    </section>
-  );
-}
-
-/* ── Map card (over the map) ───────────────────────────────────────── */
-type MapCardProps = {
-  scenario: Scenario;
-  sit: Situation;
-  focusId: string | null;
-  chosen: Situation['options'][number] | null;
-  onBack: () => void;
-  onAll: () => void;
-  onPick: (id: string) => void;
-};
-
-function MapCard({ scenario, sit, focusId, chosen, onBack, onAll, onPick }: MapCardProps) {
-  const mine = sit.danger?.incident.id ?? sit.location.incidentId;
-  const focus = scenario.incidents.find((i) => i.id === focusId) ?? null;
-  if (focusId !== mine) {
-    return (
-      <div className="fl-mapcard">
-        <div className="fl-mapcard-text">
-          <strong>{focus ? focus.area : 'All flood areas'}</strong>
-          <small>
-            {focus
-              ? `${SEVERITY_NAME[focus.severity]} · ${focus.summary}`
-              : 'Tap an area on the map to look closer.'}
-          </small>
-        </div>
-        <button type="button" className="fl-btn fl-btn-sm" onClick={onBack}>
-          <MapPin size={14} aria-hidden /> My location
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="fl-mapcard">
-      <div className="fl-mapcard-text">
-        {chosen ? (
-          <>
-            <strong>{chosen.shelter.name}</strong>
-            <small>
-              <b>{chosen.minutes} min walk</b> · {metres(chosen.distanceM)} · {chosen.shelter.note}
-              <span className="fl-route-warning">
-                Route does not avoid floods or marked closures. Access is not verified.
-              </span>
-            </small>
-          </>
-        ) : (
-          <>
-            <strong>{focus?.area ?? sit.location.label}</strong>
-            <small>
-              {sit.danger
-                ? `${LEVEL_NAME[sit.danger.level]} · ${sit.danger.zone.depth}`
-                : 'You are outside the marked flood zones.'}
-            </small>
-          </>
-        )}
-      </div>
-      <div className="fl-mapcard-actions">
-        {chosen && sit.options.length > 1 && (
-          <div className="fl-pills" role="group" aria-label="Safe zones">
-            {sit.options.map((o) => (
-              <button
-                key={o.shelter.id}
-                type="button"
-                aria-pressed={o.shelter.id === chosen.shelter.id}
-                onClick={() => onPick(o.shelter.id)}
-              >
-                {o.minutes} min
-              </button>
-            ))}
-          </div>
-        )}
-        <button type="button" className="fl-btn fl-btn-sm fl-btn-ghost" onClick={onAll}>
-          All areas
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── News ──────────────────────────────────────────────────────────── */
-type NewsProps = {
-  alerts: Alert[];
-  loaded: boolean;
-  ok: boolean;
-  scenario: Scenario;
-  nearId: string;
-  /** Time of the newest item the person had already seen before opening this tab. Empty on a first visit. */
-  seenAt: string;
-  onRetry: () => void;
-  onArea: (id: string) => void;
-};
-const KIND_LABEL = {
-  flood: 'Flood',
-  shelter: 'Safe zone',
-  update: 'Update',
-  weather: 'Weather',
-} as const;
-
-function News({ alerts, loaded, ok, scenario, nearId, seenAt, onArea, onRetry }: NewsProps) {
-  const now = useNow();
-  const [filter, setFilter] = useState<'all' | 'near' | 'official'>('all');
-  // Fixed when the tab opens: opening it marks everything as seen, but what was new should stay marked while you read.
-  const [seenBefore] = useState(seenAt);
-  const newestFirst = (list: Alert[]) => [...list].sort((a, b) => b.at.localeCompare(a.at));
-  const official = newestFirst(alerts.filter((a) => a.sourceType === 'official'));
-  const scenarioItems = newestFirst(alerts.filter((a) => a.sourceType === 'simulation'));
-  const near = scenarioItems.filter((a) => a.incidentId === nearId);
-  const elsewhere = scenarioItems.filter((a) => a.incidentId !== nearId);
-  const areaOf = (a: Alert) => scenario.incidents.find((i) => i.id === a.incidentId) ?? null;
-
-  // The single most recent item among those on screen gets the "Latest" mark and the strip at the top.
-  const visible = [
-    ...(filter !== 'official' ? near : []),
-    ...(filter !== 'near' ? official : []),
-    ...(filter === 'all' ? elsewhere : []),
-  ];
-  const latest = visible.reduce<Alert | null>(
-    (best, a) => (!best || a.at > best.at ? a : best),
-    null,
-  );
-  const isNew = (a: Alert) => seenBefore !== '' && a.at > seenBefore;
-  const newCount = visible.filter(isNew).length;
-  const showLatest = () =>
-    document
-      .getElementById(`fl-news-${latest?.id}`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-  const item = (a: Alert) => {
-    const area = areaOf(a);
-    return (
-      <li key={a.id}>
-        <article
-          id={`fl-news-${a.id}`}
-          className="fl-news"
-          data-kind={a.kind}
-          data-official={a.sourceType === 'official' || undefined}
-          data-latest={a.id === latest?.id || undefined}
-          data-new={isNew(a) || undefined}
-        >
-          <header>
-            <span className="fl-news-kind">{KIND_LABEL[a.kind]}</span>
-            {a.id === latest?.id ? (
-              <span className="fl-news-flag" data-latest>
-                Latest
-              </span>
-            ) : (
-              isNew(a) && <span className="fl-news-flag">New</span>
-            )}
-            <time
-              dateTime={a.at}
-              title={new Date(a.at).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
-            >
-              {ago(a.at, now)} · {clockMY(a.at)}
-            </time>
-          </header>
-          <h3>{a.title}</h3>
-          <p>{a.text}</p>
-          <footer>
-            <span className="fl-news-src" data-official={a.sourceType === 'official' || undefined}>
-              {a.sourceType === 'official' ? `Official · ${a.source}` : `Simulated · ${a.source}`}
-            </span>
-            {a.validTo && (
-              <span>
-                Until{' '}
-                {new Date(a.validTo).toLocaleDateString('en-MY', {
-                  day: 'numeric',
-                  month: 'short',
-                  timeZone: 'Asia/Kuala_Lumpur',
-                })}
-                , {clockMY(a.validTo)}
-              </span>
-            )}
-            {a.sourceType === 'official' && !a.local && <span>Other states</span>}
-            {area && (
-              <button type="button" className="fl-linkbtn" onClick={() => onArea(area.id)}>
-                {area.area} on map
-              </button>
-            )}
-            {a.url && (
-              <a className="fl-linkbtn" href={a.url} target="_blank" rel="noreferrer">
-                met.gov.my
-              </a>
-            )}
-          </footer>
-        </article>
-      </li>
-    );
-  };
-
-  const section = (title: string, hint: string, list: Alert[], empty: string) => (
-    <section className="fl-newsgroup">
-      <div className="fl-newsgroup-head">
-        <h2>{title}</h2>
-        <small>{hint}</small>
-      </div>
-      {list.length ? (
-        <ul className="fl-newslist">{list.map(item)}</ul>
-      ) : (
-        <p className="fl-empty">{empty}</p>
-      )}
-    </section>
-  );
-
-  return (
-    <>
-      <div className="fl-pagehead">
-        <h1>News and warnings</h1>
-        <div className="fl-pills" role="group" aria-label="Filter news">
-          <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
-            All
-          </button>
-          <button type="button" aria-pressed={filter === 'near'} onClick={() => setFilter('near')}>
-            Near me
-          </button>
-          <button
-            type="button"
-            aria-pressed={filter === 'official'}
-            onClick={() => setFilter('official')}
-          >
-            Official
-          </button>
-        </div>
-      </div>
-      {!ok && (
-        <p className="fl-inline-warn" role="status">
-          Could not refresh just now. Showing the last updates received.
-        </p>
-      )}
-      {!loaded ? (
-        <LoadState
-          error={ok ? null : 'News could not be loaded. Check the connection and try again.'}
-          onRetry={onRetry}
-        />
-      ) : (
-        <>
-          {latest && (
-            <button type="button" className="fl-latest" onClick={showLatest} data-testid="latest">
-              <i aria-hidden />
-              <span>
-                <small>
-                  Most recent · {ago(latest.at, now)}
-                  {newCount > 0 && ` · ${newCount} new since your last visit`}
-                </small>
-                <strong>{latest.title}</strong>
-              </span>
-              <ChevronRight size={18} aria-hidden />
-            </button>
-          )}
-          {filter !== 'official' &&
-            section('Near you', 'Simulated · newest first', near, 'No updates for your area yet.')}
-          {filter !== 'near' &&
-            section(
-              'Official weather warnings',
-              'Live from MET Malaysia · newest first',
-              official,
-              'No official warnings are in force right now, or the MET Malaysia feed could not be reached.',
-            )}
-          {filter === 'all' &&
-            section(
-              'Other areas',
-              'Simulated · newest first',
-              elsewhere,
-              'Nothing from other areas yet.',
-            )}
-        </>
-      )}
-    </>
-  );
-}
-
-/* ── Get help ──────────────────────────────────────────────────────── */
-const NEEDS: { type: SosType; label: string; Icon: typeof Waves }[] = [
-  { type: 'trapped', label: 'Trapped', Icon: Waves },
-  { type: 'medical-help', label: 'Medical', Icon: Stethoscope },
-  { type: 'supplies', label: 'Supplies', Icon: Package },
-  { type: 'other', label: 'Other', Icon: LifeBuoy },
-];
-const STEPS = ['pending', 'assigned', 'resolved'] as const;
-
-function Help({
-  scenario,
-  sit,
-  sos,
-  onSent,
-  onClear,
-}: {
-  scenario: Scenario;
-  sit: Situation;
-  sos: Sos | null;
-  onSent: (s: Sos) => void;
-  onClear: () => void;
-}) {
-  const [type, setType] = useState<SosType>('trapped');
-  const [people, setPeople] = useState(1);
-  const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [share, setShare] = useState(true);
-  const { profile } = useProfile(scenario);
-  const now = useNow();
-
-  const send = async () => {
-    if (busy) {
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      onSent(
-        await api.createSos({
-          incidentId: sit.danger?.incident.id ?? sit.location.incidentId,
-          people,
-          type,
-          description: note.trim(),
-          location: sit.location.location,
-          locationMode: 'manual-demo',
-          profile: share ? profile : null,
-        }),
-      );
-      setNote('');
-    } catch (e) {
-      setError(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (sos) {
-    const at = STEPS.indexOf(sos.status);
-    // A request keeps its original location even when the viewer moves the simulated citizen.
-    const sentFrom = nearest(
-      sos.location,
-      scenario.demoLocations.filter((place) => place.incidentId === sos.incidentId),
-    );
-    return (
-      <>
-        <div className="fl-pagehead">
-          <h1>Your request</h1>
-        </div>
-        <section className="fl-card fl-track" data-status={sos.status}>
-          <div className="fl-track-head">
-            <div>
-              <strong data-testid="sos-headline">{STATUS_LABEL[sos.status]}</strong>
-              <small>
-                {sos.status === 'assigned'
-                  ? `${sos.assignedTeam} has your location.`
-                  : sos.status === 'resolved'
-                    ? `Closed by ${sos.assignedTeam ?? 'the responders'}.`
-                    : 'The responders can see your request and location.'}
-              </small>
-            </div>
-            <span className="fl-id" data-testid="sos-id">
-              {sos.id}
-            </span>
-          </div>
-          <ol className="fl-timeline">
-            {(['Request sent', 'Team on the way', 'Resolved'] as const).map((label, n) => (
-              <li key={label} data-done={n <= at || undefined} data-now={n === at || undefined}>
-                <i aria-hidden>{n <= at && <Check size={13} />}</i>
-                <span>
-                  <strong>{label}</strong>
-                  <small>
-                    {n === 0
-                      ? `${clockMY(sos.createdAt)} · ${ago(sos.createdAt, now)}`
-                      : n === at
-                        ? `${clockMY(sos.updatedAt)}${n === 1 && sos.assignedTeam ? ` · ${sos.assignedTeam}` : ''}`
-                        : n < at
-                          ? 'Done'
-                          : 'Waiting'}
-                  </small>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <dl className="fl-facts">
-            <div>
-              <dt>Need</dt>
-              <dd>{TYPE_LABEL[sos.type]}</dd>
-            </div>
-            <div>
-              <dt>People</dt>
-              <dd>{sos.people}</dd>
-            </div>
-            <div>
-              <dt>From</dt>
-              <dd>{sentFrom.label}</dd>
-            </div>
-          </dl>
-          {sos.description && <p className="fl-quote">“{sos.description}”</p>}
-        </section>
-        {sos.status === 'resolved' ? (
-          <button type="button" className="fl-btn fl-btn-block" onClick={onClear}>
-            Send a new request
-          </button>
-        ) : (
-          <section className="fl-card">
-            <h2>While you wait</h2>
-            <ul className="fl-ticks">
-              {scenario.actions[sit.danger?.level ?? 'moderate'].slice(0, 3).map((s) => (
-                <li key={s}>
-                  <Check size={16} aria-hidden /> {s}
-                </li>
-              ))}
-            </ul>
-            <a className="fl-btn fl-btn-block" href="tel:999" target="_top">
-              <PhoneIcon size={16} aria-hidden /> Call 999 if it gets worse
-            </a>
-          </section>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="fl-pagehead">
-        <h1>Request help</h1>
-      </div>
-      <section className="fl-card">
-        <h2>What do you need?</h2>
-        <div className="fl-choices" role="radiogroup" aria-label="What do you need?">
-          {NEEDS.map((n) => (
-            <button
-              key={n.type}
-              type="button"
-              role="radio"
-              aria-checked={type === n.type}
-              onClick={() => setType(n.type)}
-            >
-              <n.Icon size={20} aria-hidden />
-              {n.label}
-            </button>
-          ))}
-        </div>
-
-        <h2>How many people?</h2>
-        <div className="fl-stepper">
-          <button
-            type="button"
-            onClick={() => setPeople((p) => Math.max(1, p - 1))}
-            disabled={people <= 1}
-            aria-label="One fewer"
-          >
-            <Minus size={18} aria-hidden />
-          </button>
-          <output aria-live="polite" data-testid="people">
-            {people}
-          </output>
-          <button
-            type="button"
-            onClick={() => setPeople((p) => Math.min(50, p + 1))}
-            disabled={people >= 50}
-            aria-label="One more"
-          >
-            <Plus size={18} aria-hidden />
-          </button>
-        </div>
-
-        <h2>
-          <label htmlFor="fl-note">
-            Anything they should know? <span className="fl-optional">Optional</span>
-          </label>
-        </h2>
-        <textarea
-          id="fl-note"
-          className="fl-textarea"
-          rows={3}
-          maxLength={280}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="For example: second floor, one elderly person, water still rising"
-        />
-
-        <label className="fl-sendas">
-          <Avatar name={profile.name} size={40} />
-          <span>
-            <strong>{share ? `Sending as ${profile.name}` : 'Sending without your profile'}</strong>
-            <small>
-              {share
-                ? `Age ${profile.age}. Responders will see your profile.`
-                : 'Responders will only see your location and need.'}
-            </small>
-          </span>
-          <input
-            type="checkbox"
-            checked={share}
-            onChange={(event) => setShare(event.target.checked)}
-            aria-label="Share my profile with responders"
-            data-testid="share-profile"
-          />
-        </label>
-        <p className="fl-sendfrom">
-          <MapPin size={15} aria-hidden /> Sending from <strong>{sit.location.label}</strong>
-        </p>
-        <p className="fl-fine">
-          Public demo: use fictional details only. Requests and shared profiles are visible to all
-          visitors.
-        </p>
-        {error && (
-          <p className="fl-inline-warn" role="alert">
-            {error}
-          </p>
-        )}
-        <button
-          type="button"
-          className="fl-btn fl-btn-danger fl-btn-block fl-btn-lg"
-          onClick={send}
-          disabled={busy}
-          data-testid="send-sos"
-        >
-          <LifeBuoy size={18} aria-hidden /> {busy ? 'Sending…' : 'Send request'}
-        </button>
-        <p className="fl-fine">
-          Simulation: this goes to the demo first-responder screen, not to a real emergency service.
-          In a real emergency call 999.
-        </p>
-      </section>
-      {sit.danger && (
-        <p className="fl-fine fl-center">
-          <LevelTag level={sit.danger.level} /> You are in the{' '}
-          {LEVEL_NAME[sit.danger.level].toLowerCase()} zone at {sit.danger.incident.area}.
-        </p>
-      )}
-    </>
   );
 }

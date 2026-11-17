@@ -1,5 +1,7 @@
-// The front door: a phone on its lock screen with one emergency alert, because that is how it starts for a real
-// person. FLARE has noticed the phone is inside a flood zone. Opening the alert opens the app on its emergency guide.
+// The front door: a phone on its lock screen with one emergency alert, because that is how it
+// starts for a real
+// person. FLARE has noticed the phone is inside a flood zone. Opening the alert opens the app on
+// its emergency guide.
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, TriangleAlert } from 'lucide-react';
 import { FlareLogo } from '../shared/Logo.tsx';
@@ -29,18 +31,31 @@ export default function Landing() {
     return scenario && place ? situationAt(scenario, place) : null;
   }, [scenario]);
 
-  // Coming back with the browser's Back button must show the lock screen again, not the opened state.
+  // Coming back with the browser's Back button must show the lock screen again, not the opened
+  // state.
   useEffect(() => {
     const reset = () => setOpening(false);
     window.addEventListener('pageshow', reset);
     return () => window.removeEventListener('pageshow', reset);
   }, []);
 
-  const body = start?.danger
-    ? `You are in a ${LEVEL_NAME[start.danger.level].toLowerCase()} flood zone at ${start.danger.incident.area}. Open for what to do and the way to a safe zone.`
-    : error
-      ? 'The scenario could not be loaded. Try again using the button beside the phone.'
-      : 'Loading the scenario and checking the starting location…';
+  let body = 'Loading the scenario and checking the starting location…';
+  if (start?.danger) {
+    const level = LEVEL_NAME[start.danger.level].toLowerCase();
+    const area = start.danger.incident.area;
+    body =
+      `You are in a ${level} flood zone at ${area}. ` +
+      'Open for what to do and the way to a safe zone.';
+  } else if (error) {
+    body = 'The scenario could not be loaded. Try again using the button beside the phone.';
+  }
+
+  let headline = 'Loading alert…';
+  if (start) {
+    headline = 'EMERGENCY FLOOD';
+  } else if (error) {
+    headline = 'Alert unavailable';
+  }
 
   const open = () => {
     if (opening) {
@@ -127,9 +142,7 @@ export default function Landing() {
                 <span className="fl-lock-alert-app">FLARE · Emergency alert</span>
                 <i>now</i>
               </span>
-              <strong>
-                {start ? 'EMERGENCY FLOOD' : error ? 'Alert unavailable' : 'Loading alert…'}
-              </strong>
+              <strong>{headline}</strong>
               <span className="fl-lock-alert-body">{body}</span>
               <span className="fl-lock-alert-meta">Simulation · Tap to open</span>
             </button>

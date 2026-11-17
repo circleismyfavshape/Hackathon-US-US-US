@@ -13,7 +13,7 @@ const FALLBACK_PROFILE: CitizenProfile = {
   emergencyContact: '',
 };
 
-/** Additive map fields may be absent while an older server is still running after a client rebuild. */
+/** Fill optional map fields when the client talks to an older server. */
 export function parseScenario(value: unknown): Scenario {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('The server did not return a scenario. Restart FLARE, then try again.');

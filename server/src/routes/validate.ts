@@ -32,7 +32,7 @@ export const PROFILE_LIMITS = {
   emergencyContact: 120,
 } as const;
 
-/** Checks an optional shared profile. Returns the trimmed profile, null when none was sent, or the problems found. */
+/** Validate and trim a shared profile. Missing profiles are allowed. */
 export function validateProfile(profile: unknown): Result<CitizenProfile | null> {
   if (profile === undefined || profile === null) {
     return { ok: true, value: null };

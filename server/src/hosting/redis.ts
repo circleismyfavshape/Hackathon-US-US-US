@@ -11,11 +11,16 @@ export interface SharedState {
 }
 
 // Compare and publish in one transaction so concurrent requests cannot overwrite each other.
-const COMMIT = `
+const COMPARE_AND_SET_SCRIPT = `
 local current = redis.call('GET', KEYS[1])
-if (current or '') ~= ARGV[1] then return 0 end
+if (current or '') ~= ARGV[1] then
+  return 0
+end
+
 redis.call('SET', KEYS[1], ARGV[2])
-if ARGV[3] ~= '' then redis.call('PUBLISH', KEYS[2], ARGV[3]) end
+if ARGV[3] ~= '' then
+  redis.call('PUBLISH', KEYS[2], ARGV[3])
+end
 return 1
 `;
 
@@ -55,7 +60,7 @@ export class RedisState implements SharedState {
     return (
       (await this.command<number>([
         'EVAL',
-        COMMIT,
+        COMPARE_AND_SET_SCRIPT,
         2,
         this.key,
         this.channel,

@@ -176,6 +176,7 @@ flowchart LR
 
 ```text
 client/src/flare/          Citizen and responder screens, map layers, phone notes and styles
+client/src/flare/citizen/  Citizen guide, news, help, map summary and request tracking
 client/src/features/      Pure location and geometry helpers
 client/src/shared/        Typed API client and logo
 client/src/components/ui/ Adapted map component
