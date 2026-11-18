@@ -5,6 +5,7 @@
 //   /phone/responder   the responder console in a phone frame
 //   /responder         the responder console on a wide screen
 import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import Citizen from './flare/Citizen.tsx';
 import Landing from './flare/Landing.tsx';
 import Phone from './flare/Phone.tsx';
@@ -40,8 +41,11 @@ export default function App() {
 
   return (
     // Keyed by path: each view starts clean, so nothing from the last one can break the next.
-    <Crash key={path} label="FLARE">
-      {pageForPath(path)}
-    </Crash>
+    <>
+      <Crash key={path} label="FLARE">
+        {pageForPath(path)}
+      </Crash>
+      <Analytics />
+    </>
   );
 }
